@@ -6,6 +6,8 @@ import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { AuthModal } from './AuthModal';
 
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://ndvjpqubhjrsgjbkuxrh.supabase.co';
+
 type Step = 'service' | 'calendar' | 'details' | 'success';
 
 interface Slot {
@@ -89,34 +91,64 @@ export const BookingFlow: React.FC<{ isOpen: boolean; onClose: () => void; initi
 
   const handlePayment = async () => {
     if (!selectedService || !selectedTime) return;
+
+    // Check if user is authenticated
+    if (!session?.user) {
+      setShowAuthPrompt(true);
+      return;
+    }
+
     setIsProcessing(true);
 
     try {
-      if (session?.user) {
-        const { error } = await supabase
-          .from('appointments')
-          .insert({
-            user_id: session.user.id,
+      // 1. Create appointment record first (status: 'pending')
+      const { data: appointment, error: appointmentError } = await supabase
+        .from('appointments')
+        .insert({
+          user_id: session.user.id,
+          service_type: selectedService,
+          date: selectedDate.toISOString().split('T')[0],
+          time: selectedTime,
+          status: 'pending',
+        })
+        .select()
+        .single();
+
+      if (appointmentError) throw appointmentError;
+
+      // 2. Create Stripe checkout session via Edge Function
+      const response = await fetch(
+        `${SUPABASE_URL}/functions/v1/create-checkout`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
             service_type: selectedService,
-            date: selectedDate.toISOString(),
-            time: selectedTime,
-            status: 'booked'
-          });
-        if (error) throw error;
-      } else {
-        setShowAuthPrompt(true);
-        setIsProcessing(false);
-        return;
+            user_id: session.user.id,
+            appointment_id: appointment.id,
+            customer_email: formData.email || session.user.email,
+            success_url: `${window.location.origin}?booking=success`,
+            cancel_url: `${window.location.origin}?booking=cancelled`,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create checkout session');
       }
 
-      setTimeout(() => {
-        setIsProcessing(false);
-        setStep('success');
-      }, 2000);
+      // 3. Redirect to Stripe Checkout
+      window.location.href = data.url;
+
     } catch (err) {
-      console.error('Booking failed:', err);
+      console.error('Payment error:', err);
       setIsProcessing(false);
-      alert('There was an error processing your booking.');
+      alert('There was an error processing your payment. Please try again.');
     }
   };
 
