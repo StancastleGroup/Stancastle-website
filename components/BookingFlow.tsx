@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, ArrowRight, Calendar as CalendarIcon, Clock, CheckCircle2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { AuthModal } from './AuthModal';
-import { Button } from './ui/button';
+// Fixed the "Button" case-sensitivity issue for Vercel
+import { Button } from './ui/Button';
 
 const SERVICES = {
   diagnostic: {
@@ -53,11 +54,14 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
 
   const handlePayment = async () => {
     if (!selectedService || !selectedTime) return;
+
     if (!session) {
       setShowAuthPrompt(true);
       return;
     }
+
     setIsProcessing(true);
+
     try {
       const { data: appointment, error: appointmentError } = await supabase
         .from('appointments')
@@ -134,12 +138,14 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
           className="relative w-full max-w-4xl bg-[#0f0f13] rounded-[32px] border border-white/10 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
         >
           <div className="p-6 md:p-8 border-b border-white/5 flex items-center justify-between shrink-0">
-            <h2 className="text-2xl font-serif font-bold text-white">
-              {step === 'service' && 'Select Service'}
-              {step === 'calendar' && 'Choose Your Slot'}
-              {step === 'details' && 'Secure Checkout'}
-              {step === 'success' && 'Booking Confirmed'}
-            </h2>
+            <div>
+              <h2 className="text-2xl font-serif font-bold text-white">
+                {step === 'service' && 'Select Service'}
+                {step === 'calendar' && 'Choose Your Slot'}
+                {step === 'details' && 'Secure Checkout'}
+                {step === 'success' && 'Booking Confirmed'}
+              </h2>
+            </div>
             <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-full transition-colors">
               <X className="w-6 h-6 text-gray-400" />
             </button>
@@ -150,7 +156,11 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
               {step === 'service' && (
                 <motion.div key="service" className="grid md:grid-cols-2 gap-6">
                   {Object.entries(SERVICES).map(([key, s]) => (
-                    <button key={key} onClick={() => { setSelectedService(key as any); setStep('calendar'); }} className="text-left p-8 rounded-2xl border border-white/5 bg-white/[0.02] hover:border-fuchsia-500 transition-all">
+                    <button 
+                      key={key} 
+                      onClick={() => { setSelectedService(key as any); setStep('calendar'); }} 
+                      className="text-left p-8 rounded-2xl border border-white/5 bg-white/[0.02] hover:border-fuchsia-500 transition-all"
+                    >
                       <h3 className="text-2xl font-bold text-white mb-2">{s.title}</h3>
                       <p className="text-gray-400 text-sm mb-8">{s.description}</p>
                       <span className="text-3xl font-bold text-white">{s.price}</span>
@@ -167,7 +177,11 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
                          const d = new Date();
                          d.setDate(d.getDate() + i);
                          return (
-                           <button key={i} onClick={() => setSelectedDate(d)} className={`h-10 rounded-lg text-sm ${d.toDateString() === selectedDate.toDateString() ? 'bg-fuchsia-500 text-white' : 'text-gray-400 hover:bg-white/5'}`}>
+                           <button 
+                            key={i} 
+                            onClick={() => setSelectedDate(d)} 
+                            className={`h-10 rounded-lg text-sm ${d.toDateString() === selectedDate.toDateString() ? 'bg-fuchsia-500 text-white' : 'text-gray-400 hover:bg-white/5'}`}
+                           >
                              {d.getDate()}
                            </button>
                          );
@@ -177,7 +191,11 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
                   <div className="w-full md:w-64">
                     <div className="grid grid-cols-1 gap-3">
                       {getAvailableSlots(selectedDate).map((slot, idx) => (
-                        <button key={idx} onClick={() => setSelectedTime(slot.time)} className={`py-3 px-4 rounded-xl text-sm font-bold border ${selectedTime === slot.time ? 'bg-fuchsia-500 border-fuchsia-500 text-white' : 'border-white/5 text-gray-300'}`}>
+                        <button 
+                          key={idx} 
+                          onClick={() => setSelectedTime(slot.time)} 
+                          className={`py-3 px-4 rounded-xl text-sm font-bold border ${selectedTime === slot.time ? 'bg-fuchsia-500 border-fuchsia-500 text-white' : 'border-white/5 text-gray-300'}`}
+                        >
                           {slot.time}
                         </button>
                       ))}
@@ -190,7 +208,13 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
               {step === 'details' && (
                 <motion.div key="details" className="grid lg:grid-cols-12 gap-10">
                   <div className="lg:col-span-7 space-y-6">
-                    <input type="email" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} placeholder="Email" className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-white" />
+                    <input 
+                      type="email" 
+                      value={formData.email} 
+                      onChange={(e) => setFormData({...formData, email: e.target.value})} 
+                      placeholder="Email" 
+                      className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-white" 
+                    />
                   </div>
                   <div className="lg:col-span-5">
                     <div className="bg-white/[0.02] border border-white/10 rounded-2xl p-6">
