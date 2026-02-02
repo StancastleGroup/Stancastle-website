@@ -90,66 +90,72 @@ export const BookingFlow: React.FC<{ isOpen: boolean; onClose: () => void; initi
   };
 
   const handlePayment = async () => {
+    // Safety check: ensure service/time are selected
     if (!selectedService || !selectedTime) return;
-
-    // Check if user is authenticated
-    if (!session?.user) {
+  
+    // 1. AUTO-LOGIN TRIGGER
+    // If not logged in, show the login prompt immediately
+    if (!session) {
       setShowAuthPrompt(true);
       return;
     }
-
+  
     setIsProcessing(true);
-
+  
     try {
-      // 1. Create appointment record first (status: 'pending')
+      // 2. Create appointment record first
       const { data: appointment, error: appointmentError } = await supabase
         .from('appointments')
         .insert({
           user_id: session.user.id,
           service_type: selectedService,
-          date: selectedDate.toISOString().split('T')[0],
+          date: selectedDate?.toISOString().split('T')[0],
           time: selectedTime,
           status: 'pending',
         })
         .select()
         .single();
-
+  
       if (appointmentError) throw appointmentError;
-
-      // 2. Create Stripe checkout session via Edge Function
+  
+      // 3. Create Stripe Checkout (NOW WITH HEADERS FIXED)
       const response = await fetch(
-        `${SUPABASE_URL}/functions/v1/create-checkout`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-checkout`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${session.access_token}`,
+            // The "Guest Pass" header that was missing:
+            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${session.access_token}`,
           },
           body: JSON.stringify({
             service_type: selectedService,
             user_id: session.user.id,
             appointment_id: appointment.id,
-            customer_email: formData.email || session.user.email,
             success_url: `${window.location.origin}?booking=success`,
             cancel_url: `${window.location.origin}?booking=cancelled`,
           }),
         }
       );
-
-      const data = await response.json();
-
+  
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to create checkout session');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Payment initialization failed');
       }
-
-      // 3. Redirect to Stripe Checkout
-      window.location.href = data.url;
-
-    } catch (err) {
-      console.error('Payment error:', err);
-      setIsProcessing(false);
+  
+      const { url } = await response.json();
+  
+      // 4. Redirect to Stripe
+      window.location.href = url;
+  
+    } catch (error) {
+      console.error('Payment error:', error);
       alert('There was an error processing your payment. Please try again.');
+    } finally {
+      setIsProcessing(false);
     }
+  };
   };
 
   if (!isOpen) return null;
