@@ -18,13 +18,13 @@ const PRICES = {
     mode: 'payment' as const,
   },
   partner: {
-    // This ID tells Stripe which monthly subscription to charge
-    priceId: 'price_1SucNB3309DWqldSSEOZCeFg',
+    amount: 74999, // £749.99 in pence
     name: 'Partner Programme',
     description: 'Acting Strategic Leadership for operational restructuring and growth.',
     mode: 'subscription' as const,
   },
 };
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -62,11 +62,7 @@ serve(async (req) => {
             description: service.description,
           },
           unit_amount: service.amount,
-          ...(service.mode === 'subscription' && {
-            recurring: {
-              interval: 'month',
-            },
-          }),
+          ...(service.mode === 'subscription' ? { recurring: { interval: 'month' } } : {}),
         },
         quantity: 1,
       }],
