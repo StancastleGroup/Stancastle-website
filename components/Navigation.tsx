@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, User, Instagram, LogIn } from 'lucide-react';
 import { Button } from './ui/Button';
 import { NavItem } from '../types';
 import { useAuth } from '../context/AuthContext';
-import { AuthModal } from './AuthModal';
+
+const AuthModal = lazy(() => import('./AuthModal').then((m) => ({ default: m.AuthModal })));
 
 const navItems: NavItem[] = [
   { label: 'About', href: '#about' },
@@ -78,11 +79,13 @@ export const Navigation: React.FC<{ onOpenBooking: () => void }> = ({ onOpenBook
 
   return (
     <>
-      <AuthModal 
-        isOpen={isAuthModalOpen} 
-        onClose={() => setIsAuthModalOpen(false)} 
-        defaultView={authView} 
-      />
+      <Suspense fallback={null}>
+        <AuthModal 
+          isOpen={isAuthModalOpen} 
+          onClose={() => setIsAuthModalOpen(false)} 
+          defaultView={authView} 
+        />
+      </Suspense>
 
       <nav 
         className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-700 ${
@@ -96,9 +99,12 @@ export const Navigation: React.FC<{ onOpenBooking: () => void }> = ({ onOpenBook
             {/* Logo - full STANCASTLE wordmark */}
             <a href="#" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="flex items-center group relative z-10 shrink-0 min-w-0">
               <img
-                src="/logo.png"
+                src="/favicon.jpeg"
                 alt="Stancastle"
-                className="h-16 sm:h-20 xl:h-24 w-auto scale-x-[1.5] origin-left object-contain object-left transition-all duration-500 group-hover:opacity-90"
+                width={96}
+                height={64}
+                decoding="async"
+                className="h-16 sm:h-20 xl:h-24 w-auto scale-x-[1.5] origin-left object-contain object-left rounded-xl transition-all duration-500 group-hover:opacity-90"
               />
             </a>
 

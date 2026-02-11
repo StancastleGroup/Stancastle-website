@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { Navigation } from './components/Navigation';
 import { Hero } from './components/Hero';
 import { ProblemSection } from './components/ProblemSection';
@@ -10,10 +10,11 @@ import { Testimonials } from './components/Testimonials';
 import { FAQ } from './components/FAQ';
 import { ContactForm } from './components/ContactForm';
 import { Footer } from './components/Footer';
-import { BookingFlow } from './components/BookingFlow';
 import { AuthProvider } from './context/AuthContext';
 import { AnimatePresence, motion, useScroll, useSpring } from 'framer-motion';
 import { CheckCircle2 } from 'lucide-react';
+
+const BookingFlow = lazy(() => import('./components/BookingFlow').then((m) => ({ default: m.BookingFlow })));
 
 function App() {
   const [isBookingOpen, setIsBookingOpen] = useState(false);
@@ -54,11 +55,13 @@ function App() {
         
         <AnimatePresence>
           {isBookingOpen && (
-            <BookingFlow 
-              isOpen={isBookingOpen} 
-              onClose={() => setIsBookingOpen(false)} 
-              initialService={initialServiceType ?? 'diagnostic'}
-            />
+            <Suspense fallback={null}>
+              <BookingFlow 
+                isOpen={isBookingOpen} 
+                onClose={() => setIsBookingOpen(false)} 
+                initialService={initialServiceType ?? 'diagnostic'}
+              />
+            </Suspense>
           )}
         </AnimatePresence>
 

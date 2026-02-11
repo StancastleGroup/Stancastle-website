@@ -1,7 +1,9 @@
-import React from 'react';
+import './index.css';
+import React, { lazy, Suspense } from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
-import { OutlookAuthPage } from './components/OutlookAuthPage';
+
+const OutlookAuthPage = lazy(() => import('./components/OutlookAuthPage').then((m) => ({ default: m.OutlookAuthPage })));
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -13,6 +15,12 @@ const isOutlookAuth = typeof window !== 'undefined' && window.location.pathname 
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
-    {isOutlookAuth ? <OutlookAuthPage /> : <App />}
+    {isOutlookAuth ? (
+      <Suspense fallback={<div className="min-h-screen bg-[#050508] flex items-center justify-center text-[#94a3b8]">Loading…</div>}>
+        <OutlookAuthPage />
+      </Suspense>
+    ) : (
+      <App />
+    )}
   </React.StrictMode>
 );
