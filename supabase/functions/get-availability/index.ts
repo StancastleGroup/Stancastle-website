@@ -71,40 +71,10 @@ async function getOutlookAccessToken(): Promise<string | null> {
   return data.access_token ?? null;
 }
 
-/** Fetch free/busy from Outlook for one day (UK). Returns list of free 90-min slot start times (HH:mm). */
-async function getOutlookFreeSlotsForDate(
-  accessToken: string,
-  email: string,
-  dateStr: string,
-  dayOfWeek: number
-): Promise<string[]> {
+/** Parse one day's availabilityView (48 chars = 24h in 30-min chunks) into free 90-min slot starts. */
+function parseDayView(view: string, dayOfWeek: number): string[] {
   const ruleSlots = SLOTS_BY_DAY[dayOfWeek] ?? [];
-  if (ruleSlots.length === 0) return [];
-
-  const start = `${dateStr}T00:00:00`;
-  const end = `${dateStr}T23:59:59`;
-  const res = await fetch('https://graph.microsoft.com/v1.0/users/' + encodeURIComponent(email) + '/calendar/getSchedule', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      schedules: [email],
-      startTime: { dateTime: start, timeZone: 'Europe/London' },
-      endTime: { dateTime: end, timeZone: 'Europe/London' },
-      availabilityViewInterval: 30,
-    }),
-  });
-  if (!res.ok) {
-    console.error('[get-availability] getSchedule failed:', res.status, await res.text());
-    return ruleSlots;
-  }
-  const data = await res.json();
-  const schedule = data?.value?.[0];
-  const view: string = schedule?.availabilityView ?? '';
-  // availabilityView: 30-min chunks for the day in the requested timezone. "0"=free, "1"=tentative, "2"=busy, "3"=oof.
-  // Chunk 0 = midnight, chunk 16 = 08:00, chunk 19 = 09:30, etc. 90 min = 3 chunks.
+  if (ruleSlots.length === 0 || view.length < 48) return [];
   const freeSlots: string[] = [];
   for (const startSlot of ruleSlots) {
     const [sh, sm] = startSlot.split(':').map(Number);
@@ -123,6 +93,49 @@ async function getOutlookFreeSlotsForDate(
   return freeSlots;
 }
 
+/** Fetch free/busy from Outlook for a date range in one getSchedule call (max ~31 days). Returns date -> slots. */
+async function getOutlookFreeSlotsForRange(
+  accessToken: string,
+  email: string,
+  dateStrings: string[]
+): Promise<Record<string, string[]>> {
+  if (dateStrings.length === 0) return {};
+  const start = `${dateStrings[0]}T00:00:00`;
+  const last = dateStrings[dateStrings.length - 1];
+  const end = `${last}T23:59:59`;
+  const res = await fetch('https://graph.microsoft.com/v1.0/users/' + encodeURIComponent(email) + '/calendar/getSchedule', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      schedules: [email],
+      startTime: { dateTime: start, timeZone: 'Europe/London' },
+      endTime: { dateTime: end, timeZone: 'Europe/London' },
+      availabilityViewInterval: 30,
+    }),
+  });
+  if (!res.ok) {
+    console.error('[get-availability] getSchedule failed:', res.status, await res.text());
+    return {};
+  }
+  const data = await res.json();
+  const schedule = data?.value?.[0];
+  const view: string = schedule?.availabilityView ?? '';
+  // availabilityView: 30-min chunks, 48 per day (00:00–23:30). Each day = 48 chars.
+  const out: Record<string, string[]> = {};
+  const chunksPerDay = 48;
+  for (let i = 0; i < dateStrings.length; i++) {
+    const dateStr = dateStrings[i];
+    const d = new Date(dateStr + 'T12:00:00Z');
+    const dayOfWeek = d.getUTCDay();
+    const dayView = view.slice(i * chunksPerDay, (i + 1) * chunksPerDay);
+    out[dateStr] = parseDayView(dayView, dayOfWeek);
+  }
+  return out;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
@@ -131,8 +144,7 @@ serve(async (req) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const fromDate = body.from_date ? new Date(body.from_date) : new Date(today);
-    const toDate = body.to_date ? new Date(body.to_date) : new Date(today);
-    toDate.setDate(toDate.getDate() + 21);
+    const toDate = body.to_date ? new Date(body.to_date) : (() => { const d = new Date(today); d.setDate(d.getDate() + 21); return d; })();
     fromDate.setHours(0, 0, 0, 0);
     toDate.setHours(23, 59, 59, 999);
 
@@ -163,11 +175,23 @@ serve(async (req) => {
     if (useOutlook) {
       const token = await getOutlookAccessToken();
       if (token) {
+        // Batch Outlook: one getSchedule per ~14 days, run batches in parallel (was 1 call per day = 60+ sequential).
+        const BATCH_DAYS = 14;
+        const batches: string[][] = [];
+        for (let i = 0; i < dates.length; i += BATCH_DAYS) {
+          batches.push(dates.slice(i, i + BATCH_DAYS));
+        }
+        const batchResults = await Promise.all(
+          batches.map((batch) => getOutlookFreeSlotsForRange(token, outlookEmail, batch))
+        );
+        const byDate: Record<string, string[]> = {};
+        for (const r of batchResults) {
+          for (const [dateStr, slots] of Object.entries(r)) {
+            byDate[dateStr] = slots;
+          }
+        }
         for (const dateStr of dates) {
-          const d = new Date(dateStr + 'T12:00:00Z');
-          const dayOfWeek = d.getUTCDay();
-          const ruleSlots = SLOTS_BY_DAY[dayOfWeek] ?? [];
-          const freeSlots = await getOutlookFreeSlotsForDate(token, outlookEmail, dateStr, dayOfWeek);
+          const freeSlots = byDate[dateStr] ?? [];
           const available = freeSlots.filter((t) => !bookedSet.has(`${dateStr}T${t}`));
           result.push({ date: dateStr, slots: available });
         }
