@@ -39,7 +39,7 @@ export const WhyUs: React.FC = () => {
           <h2 className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
             Engineered for <span className="text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-400 to-purple-600">Impact.</span>
           </h2>
-          <p className="text-xl text-brand-muted max-w-2xl mx-auto">
+          <p className="text-xl text-brand-muted-light max-w-2xl mx-auto">
             We operate at the intersection of financial rigor and creative strategy. This isn't coaching. It's business engineering.
           </p>
         </div>
@@ -67,7 +67,7 @@ export const WhyUs: React.FC = () => {
                   {item.title}
                 </h3>
                 
-                <p className="text-brand-muted leading-relaxed text-sm md:text-base">
+                <p className="text-brand-muted-light leading-relaxed text-sm md:text-base">
                   {item.description}
                 </p>
               </div>

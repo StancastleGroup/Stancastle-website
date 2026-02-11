@@ -16,7 +16,7 @@ export const LegalModals: React.FC<LegalModalsProps> = ({ type, onClose }) => {
     terms: {
       title: 'Terms and Conditions',
       body: (
-        <div className="space-y-6 text-gray-300 text-sm leading-relaxed">
+        <div className="space-y-6 text-brand-muted-light text-sm leading-relaxed">
           <p className="font-bold text-white">Last updated: 28 January 2025</p>
           <p>These Terms and Conditions ("Terms") govern all services provided by Stancastle Ltd ("we," "us," "our") to clients ("you," "your"). By booking, purchasing, or engaging with any of our services, you agree to be bound by these Terms.</p>
           <div>
@@ -50,7 +50,7 @@ export const LegalModals: React.FC<LegalModalsProps> = ({ type, onClose }) => {
     use: {
       title: 'Terms of Use',
       body: (
-        <div className="space-y-6 text-gray-300 text-sm leading-relaxed">
+        <div className="space-y-6 text-brand-muted-light text-sm leading-relaxed">
           <p className="font-bold text-white">Last updated: 28 January 2025</p>
           <p>These Terms of Use govern your access to and use of the Stancastle Ltd website ("Site"). By accessing or using the Site, you agree to these Terms.</p>
           <h4 className="text-white font-bold">1. Acceptable Use</h4>
@@ -63,7 +63,7 @@ export const LegalModals: React.FC<LegalModalsProps> = ({ type, onClose }) => {
     privacy: {
       title: 'Privacy Policy',
       body: (
-        <div className="space-y-6 text-gray-300 text-sm leading-relaxed">
+        <div className="space-y-6 text-brand-muted-light text-sm leading-relaxed">
           <p className="font-bold text-white">Last updated: 28 January 2025</p>
           <p>Stancastle Ltd is committed to protecting your privacy. This policy explains how we collect, use, and protect your personal data in compliance with UK GDPR.</p>
           <h4 className="text-white font-bold">Data Controller</h4>
@@ -76,7 +76,7 @@ export const LegalModals: React.FC<LegalModalsProps> = ({ type, onClose }) => {
     cookie: {
       title: 'Cookie Policy',
       body: (
-        <div className="space-y-6 text-gray-300 text-sm leading-relaxed">
+        <div className="space-y-6 text-brand-muted-light text-sm leading-relaxed">
           <p className="font-bold text-white">Last updated: 28 January 2025</p>
           <p>We use essential cookies for Site functionality and analytics cookies (Google Analytics) to understand how visitors use our Site.</p>
           <p>You can control cookies through your browser settings. Disabling essential cookies may affect Site functionality.</p>
@@ -86,7 +86,7 @@ export const LegalModals: React.FC<LegalModalsProps> = ({ type, onClose }) => {
     disclaimer: {
       title: 'Disclaimer',
       body: (
-        <div className="space-y-6 text-gray-300 text-sm leading-relaxed">
+        <div className="space-y-6 text-brand-muted-light text-sm leading-relaxed">
           <p className="font-bold text-white">Last updated: 28 January 2025</p>
           <p>All information provided by Stancastle Ltd is for general informational and educational purposes only. It is not intended as regulated financial, legal, or tax advice.</p>
           <h4 className="text-white font-bold">No Guarantees</h4>
@@ -97,7 +97,7 @@ export const LegalModals: React.FC<LegalModalsProps> = ({ type, onClose }) => {
     refund: {
       title: 'Refund Policy',
       body: (
-        <div className="space-y-6 text-gray-300 text-sm leading-relaxed">
+        <div className="space-y-6 text-brand-muted-light text-sm leading-relaxed">
           <p className="font-bold text-white">Last updated: 28 January 2025</p>
           <h4 className="text-white font-bold">1. General Policy</h4>
           <p>All fees are non-refundable once a service has commenced, except as required by UK law.</p>
@@ -130,7 +130,7 @@ export const LegalModals: React.FC<LegalModalsProps> = ({ type, onClose }) => {
         <div className="p-6 border-b border-white/5 flex items-center justify-between shrink-0">
           <h2 className="text-xl font-serif font-bold text-white">{activeContent.title}</h2>
           <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-full transition-colors">
-            <X className="w-5 h-5 text-gray-400" />
+            <X className="w-5 h-5 text-brand-muted-light" />
           </button>
         </div>
         <div className="flex-grow overflow-y-auto p-8 custom-scrollbar">

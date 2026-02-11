@@ -80,7 +80,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultVi
               {view === 'signin' ? 'Welcome Back' : 'Create Account'}
             </h2>
             <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-full transition-colors">
-              <X className="w-5 h-5 text-gray-400" />
+              <X className="w-5 h-5 text-brand-muted-light" />
             </button>
           </div>
 
@@ -96,9 +96,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultVi
               <>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-gray-500 uppercase ml-1">First Name</label>
+                    <label className="text-xs font-bold text-brand-muted-light uppercase ml-1">First Name</label>
                     <div className="relative">
-                      <User className="absolute left-3 top-3.5 w-4 h-4 text-gray-500" />
+                      <User className="absolute left-3 top-3.5 w-4 h-4 text-brand-muted" />
                       <input 
                         required 
                         type="text" 
@@ -110,7 +110,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultVi
                     </div>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-gray-500 uppercase ml-1">Last Name</label>
+                    <label className="text-xs font-bold text-brand-muted-light uppercase ml-1">Last Name</label>
                     <input 
                       required 
                       type="text" 
@@ -122,9 +122,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultVi
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-gray-500 uppercase ml-1">Company</label>
+                  <label className="text-xs font-bold text-brand-muted-light uppercase ml-1">Company</label>
                   <div className="relative">
-                    <Building2 className="absolute left-3 top-3.5 w-4 h-4 text-gray-500" />
+                    <Building2 className="absolute left-3 top-3.5 w-4 h-4 text-brand-muted" />
                     <input 
                       required 
                       type="text" 
@@ -139,9 +139,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultVi
             )}
 
             <div className="space-y-1">
-              <label className="text-xs font-bold text-gray-500 uppercase ml-1">Email</label>
+              <label className="text-xs font-bold text-brand-muted-light uppercase ml-1">Email</label>
               <div className="relative">
-                <Mail className="absolute left-3 top-3.5 w-4 h-4 text-gray-500" />
+                <Mail className="absolute left-3 top-3.5 w-4 h-4 text-brand-muted" />
                 <input 
                   required 
                   type="email" 
@@ -154,9 +154,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultVi
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-bold text-gray-500 uppercase ml-1">Password</label>
+              <label className="text-xs font-bold text-brand-muted-light uppercase ml-1">Password</label>
               <div className="relative">
-                <Lock className="absolute left-3 top-3.5 w-4 h-4 text-gray-500" />
+                <Lock className="absolute left-3 top-3.5 w-4 h-4 text-brand-muted" />
                 <input 
                   required 
                   type="password" 
@@ -175,7 +175,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultVi
           </form>
 
           <div className="mt-6 pt-6 border-t border-white/5 text-center">
-            <p className="text-gray-400 text-sm">
+            <p className="text-brand-muted-light text-sm">
               {view === 'signin' ? "Don't have an account? " : "Already have an account? "}
               <button 
                 onClick={() => setView(view === 'signin' ? 'signup' : 'signin')}

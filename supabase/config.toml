@@ -1,0 +1,15 @@
+# Supabase project config (used by CLI and can affect deployed function settings).
+# stripe-webhook is called by Stripe (no JWT); send-booking-emails is called by our webhook with a secret.
+# Deploy with: supabase functions deploy stripe-webhook --no-verify-jwt
+
+[functions.stripe-webhook]
+verify_jwt = false
+
+[functions.send-booking-emails]
+verify_jwt = false
+
+[functions.get-availability]
+verify_jwt = false
+
+[functions.exchange-outlook-token]
+verify_jwt = false

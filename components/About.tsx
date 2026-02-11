@@ -22,7 +22,7 @@ export const About: React.FC = () => {
             </motion.div>
             
             <h2 className="font-serif text-5xl md:text-6xl font-bold text-white mb-6">Strategy as Engineering.</h2>
-            <p className="text-xl text-brand-muted max-w-2xl font-light leading-relaxed">
+            <p className="text-xl text-brand-muted-light max-w-2xl font-light leading-relaxed">
               We apply first-principles thinking to the structural bottlenecks of high-growth British businesses.
             </p>
         </div>
@@ -39,7 +39,7 @@ export const About: React.FC = () => {
                 <item.icon className="w-6 h-6 text-brand-accent" />
               </div>
               <h4 className="text-white font-bold mb-3 uppercase tracking-widest text-xs">{item.title}</h4>
-              <p className="text-gray-500 text-sm">{item.desc}</p>
+              <p className="text-brand-muted-light text-sm">{item.desc}</p>
             </div>
           ))}
         </div>

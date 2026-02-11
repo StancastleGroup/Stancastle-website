@@ -39,7 +39,7 @@ export const Footer: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
           <div className="space-y-6">
             <h3 className="font-serif text-2xl font-bold text-white">Stancastle</h3>
-            <p className="text-sm text-gray-400 max-w-sm leading-relaxed">
+            <p className="text-sm text-brand-muted-light max-w-sm leading-relaxed">
               Fixing actual business problems with clear thinking. No corporate theatre, just structural impact for senior business owners.
             </p>
             
@@ -50,7 +50,7 @@ export const Footer: React.FC = () => {
                  </div>
                  <span className="font-bold tracking-wide">020 8064 2496</span>
                </a>
-               <div className="flex items-start gap-3 text-gray-400">
+               <div className="flex items-start gap-3 text-brand-muted-light">
                  <div className="p-2 bg-white/5 rounded-lg shrink-0">
                     <Clock className="w-4 h-4" />
                  </div>
@@ -66,7 +66,7 @@ export const Footer: React.FC = () => {
                 href="https://www.instagram.com/stancastlegroup/" 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="text-gray-500 hover:text-white transition-colors"
+                className="text-brand-muted hover:text-white transition-colors"
                 aria-label="Instagram"
               >
                 <Instagram className="w-5 h-5" />
@@ -75,7 +75,7 @@ export const Footer: React.FC = () => {
                 href="https://tiktok.com/@Stancastlegroup" 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="text-gray-500 hover:text-white transition-colors"
+                className="text-brand-muted hover:text-white transition-colors"
                 aria-label="TikTok"
               >
                 <TikTokIcon className="w-5 h-5" />
@@ -90,7 +90,7 @@ export const Footer: React.FC = () => {
                 <li key={link.type}>
                   <button 
                     onClick={() => setLegalType(link.type)}
-                    className="text-sm text-gray-500 hover:text-white transition-colors text-left"
+                    className="text-sm text-brand-muted-light hover:text-white transition-colors text-left"
                   >
                     {link.label}
                   </button>
@@ -105,7 +105,7 @@ export const Footer: React.FC = () => {
               <li>
                 <button 
                   onClick={() => document.getElementById('faq')?.scrollIntoView({ behavior: 'smooth' })}
-                  className="text-sm text-gray-500 hover:text-white transition-colors"
+                  className="text-sm text-brand-muted-light hover:text-white transition-colors"
                 >
                   Strategic FAQ
                 </button>
@@ -113,13 +113,13 @@ export const Footer: React.FC = () => {
               <li>
                 <button 
                   onClick={() => document.getElementById('results')?.scrollIntoView({ behavior: 'smooth' })}
-                  className="text-sm text-gray-500 hover:text-white transition-colors"
+                  className="text-sm text-brand-muted-light hover:text-white transition-colors"
                 >
                   Client Results
                 </button>
               </li>
               <li>
-                <a href="mailto:contact@stancastle.com" className="text-sm text-gray-500 hover:text-white transition-colors">
+                <a href="mailto:contact@stancastle.com" className="text-sm text-brand-muted-light hover:text-white transition-colors">
                   contact@stancastle.com
                 </a>
               </li>
@@ -128,8 +128,8 @@ export const Footer: React.FC = () => {
 
           <div className="lg:text-right space-y-4">
              <div className="inline-block p-4 rounded-2xl bg-white/[0.02] border border-white/5">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-600 mb-2">Registered Office</p>
-                <p className="text-xs text-gray-400 leading-relaxed">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-brand-muted mb-2">Registered Office</p>
+                <p className="text-xs text-brand-muted-light leading-relaxed">
                   Flat 3, 216 Wash Lane<br />
                   Bury, England, BL9 7DR
                 </p>
@@ -138,11 +138,11 @@ export const Footer: React.FC = () => {
         </div>
 
         <div className="pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6">
-          <div className="text-[10px] text-gray-600 uppercase tracking-[0.2em] font-medium text-center md:text-left">
+          <div className="text-[10px] text-brand-muted uppercase tracking-[0.2em] font-medium text-center md:text-left">
             © 2025 Stancastle Ltd. All rights reserved. <br className="md:hidden" />
             Company No. 16036016 | Registered in England and Wales
           </div>
-          <div className="text-[10px] text-gray-600 uppercase tracking-[0.2em] font-medium">
+          <div className="text-[10px] text-brand-muted uppercase tracking-[0.2em] font-medium">
             UK Registered Business
           </div>
         </div>

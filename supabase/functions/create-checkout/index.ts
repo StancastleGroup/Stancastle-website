@@ -1,9 +1,15 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import Stripe from 'https://esm.sh/stripe@13.0.0?target=deno';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!, {
   apiVersion: '2023-10-16',
 });
+
+const supabase = createClient(
+  Deno.env.get('SUPABASE_URL')!,
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+);
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -26,13 +32,40 @@ const PRICES = {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
   try {
     const { service_type, user_id, appointment_id, success_url, cancel_url, customer_email } = await req.json();
+
+    if (!service_type || !user_id || !appointment_id || !success_url || !cancel_url) {
+      return new Response(
+        JSON.stringify({ error: 'Missing required fields' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate appointment exists and belongs to this user (security: no JWT required)
+    const { data: appointment, error: appointmentError } = await supabase
+      .from('appointments')
+      .select('id, user_id, status')
+      .eq('id', appointment_id)
+      .single();
+
+    if (appointmentError || !appointment || appointment.user_id !== user_id) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid or unauthorized appointment' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (appointment.status !== 'pending') {
+      return new Response(
+        JSON.stringify({ error: 'Appointment already processed' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     const service = PRICES[service_type as keyof typeof PRICES];
 

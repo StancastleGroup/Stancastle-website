@@ -137,7 +137,7 @@ export const Hero: React.FC<HeroProps> = ({ onOpenBooking }) => {
 
         <motion.div variants={container} initial="hidden" animate="show" className="w-full">
           {/* High-Impact Headline */}
-          <motion.h1 variants={item} className="font-serif text-5xl md:text-8xl lg:text-[10rem] font-bold leading-[0.85] tracking-tighter text-white mb-6">
+          <motion.h1 variants={item} className="font-serif text-4xl md:text-6xl lg:text-7xl xl:text-8xl font-bold leading-[0.9] tracking-tighter text-white mb-6">
             The decisions you're <br />
             avoiding <br />
             <span className="text-brand-accent italic drop-shadow-[0_0_30px_rgba(217,70,239,0.4)]">are costing you</span> <br />
@@ -148,7 +148,7 @@ export const Hero: React.FC<HeroProps> = ({ onOpenBooking }) => {
           <motion.div variants={item} className="flex flex-wrap justify-center gap-x-6 gap-y-4 mb-6">
             {["No frameworks.", "No motivation.", "No theory."].map((text, idx) => (
               <div key={text} className="relative inline-block px-1">
-                <span className="text-lg md:text-2xl font-mono text-gray-500/70 tracking-[0.15em] uppercase italic">
+                <span className="text-lg md:text-2xl font-mono text-brand-muted tracking-[0.15em] uppercase italic">
                   {text}
                 </span>
                 <CrossingX delay={1.4 + (idx * 0.3)} />
@@ -170,13 +170,13 @@ export const Hero: React.FC<HeroProps> = ({ onOpenBooking }) => {
           </motion.div>
 
           {/* Premium Copy with Highlights */}
-          <motion.p variants={item} className="text-xl md:text-3xl text-gray-400 leading-relaxed font-light mb-12 max-w-4xl mx-auto">
+          <motion.p variants={item} className="text-xl md:text-3xl text-brand-muted-light leading-relaxed font-light mb-12 max-w-4xl mx-auto">
             Just <motion.span className="text-white font-bold relative inline-block">
               clear thinking
-              <motion.div className="absolute -bottom-1 left-0 h-[2px] bg-brand-accent/60 w-full" initial={{ scaleX: 0 }} animate={{ scaleX: 1 }} transition={{ delay: 1.8, duration: 0.6 }} />
+              <motion.span className="absolute -bottom-1 left-0 h-[2px] bg-brand-accent/60 w-full block origin-left" style={{ transformOrigin: 'left' }} initial={{ scaleX: 0 }} animate={{ scaleX: 1 }} transition={{ delay: 1.8, duration: 0.6 }} />
             </motion.span> applied to your <motion.span className="text-white font-bold relative inline-block">
               actual business problems.
-              <motion.div className="absolute -bottom-1 left-0 h-[2px] bg-brand-accent/60 w-full" initial={{ scaleX: 0 }} animate={{ scaleX: 1 }} transition={{ delay: 2.1, duration: 0.6 }} />
+              <motion.span className="absolute -bottom-1 left-0 h-[2px] bg-brand-accent/60 w-full block origin-left" style={{ transformOrigin: 'left' }} initial={{ scaleX: 0 }} animate={{ scaleX: 1 }} transition={{ delay: 2.1, duration: 0.6 }} />
             </motion.span>
           </motion.p>
           
@@ -222,7 +222,7 @@ export const Hero: React.FC<HeroProps> = ({ onOpenBooking }) => {
                </motion.div>
             </div>
             
-            <p className="text-[10px] text-gray-600 uppercase tracking-[0.45em] text-center font-black opacity-50">
+            <p className="text-[10px] text-brand-muted uppercase tracking-[0.45em] text-center font-black">
               Founder professional exposure includes leading UK organisations. No commercial partnership implied.
             </p>
           </div>

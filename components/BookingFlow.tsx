@@ -1,17 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ArrowRight, Calendar as CalendarIcon, Clock, CheckCircle2 } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { X, ArrowRight, ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, CheckCircle2 } from 'lucide-react';
+import { supabase, supabaseUrl, supabaseAnonKey } from '../lib/supabase';
 import { AuthModal } from './AuthModal';
-// Fixed the "Button" case-sensitivity issue for Vercel
 import { Button } from './ui/Button';
+import { useAuth } from '../context/AuthContext';
+import { getBookableDates, getTimeSlotsForDate, formatDateLabel } from '../lib/availability';
+
+/** Format "10:00" -> "10:00am", "17:00" -> "5:00pm" */
+function formatTimeLabel(time: string): string {
+  const [h, m] = time.split(':').map(Number);
+  if (h === 0) return `12:${String(m).padStart(2, '0')}am`;
+  if (h < 12) return `${h}:${String(m).padStart(2, '0')}am`;
+  if (h === 12) return `12:${String(m).padStart(2, '0')}pm`;
+  return `${h - 12}:${String(m).padStart(2, '0')}pm`;
+}
 
 const SERVICES = {
   diagnostic: {
     title: 'Diagnostic Session',
     description: 'A deep dive into your business to identify gaps and opportunities.',
     price: '£159.99',
-    duration: '60 MINS'
+    duration: '90 MINS'
   },
   partner: {
     title: 'Partner Programme',
@@ -25,36 +35,168 @@ interface BookingFlowProps {
   isOpen: boolean;
   onClose: () => void;
   initialService?: 'diagnostic' | 'partner';
-  session: any;
 }
 
 export const BookingFlow: React.FC<BookingFlowProps> = ({ 
   isOpen, 
   onClose, 
   initialService = 'diagnostic',
-  session 
 }) => {
+  const { session, profile } = useAuth();
   const [step, setStep] = useState<'service' | 'calendar' | 'details' | 'success'>('service');
   const [selectedService, setSelectedService] = useState(initialService);
-  const [selectedDate, setSelectedDate] = useState(new Date());
+  const fallbackDates = useMemo(() => getBookableDates(90), []);
+  const [selectedDate, setSelectedDate] = useState<Date>(() => fallbackDates[0] ?? new Date());
   const [selectedTime, setSelectedTime] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
-  const [formData, setFormData] = useState({ firstName: '', lastName: '', email: '' });
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    companyName: '',
+    companyWebsite: '',
+    noCompany: false,
+  });
 
-  const getAvailableSlots = (date: Date) => {
-    return [
-      { time: '09:00', available: true },
-      { time: '10:00', available: true },
-      { time: '11:00', available: true },
-      { time: '14:00', available: true },
-      { time: '15:00', available: true },
-    ];
-  };
+  // Real availability: from get-availability API (Outlook + DB) or fallback to rule-based 90-min slots
+  const [availabilityByDate, setAvailabilityByDate] = useState<Record<string, string[]>>({});
+  const [availabilityLoading, setAvailabilityLoading] = useState(true);
+  // Calendar UI: which month is shown in the month picker (for prev/next)
+  const [calendarViewMonth, setCalendarViewMonth] = useState<Date>(() => {
+    const d = new Date();
+    d.setDate(1);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  });
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const from = new Date();
+    from.setHours(0, 0, 0, 0);
+    const to = new Date(from);
+    to.setDate(to.getDate() + 90);
+    const fromStr = from.toISOString().split('T')[0];
+    const toStr = to.toISOString().split('T')[0];
+    setAvailabilityLoading(true);
+    fetch(`${supabaseUrl}/functions/v1/get-availability`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: supabaseAnonKey },
+      body: JSON.stringify({ from_date: fromStr, to_date: toStr }),
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        const byDate: Record<string, string[]> = {};
+        (data.dates ?? []).forEach((d: { date: string; slots: string[] }) => {
+          byDate[d.date] = d.slots ?? [];
+        });
+        setAvailabilityByDate(byDate);
+      })
+      .catch(() => {
+        const byDate: Record<string, string[]> = {};
+        fallbackDates.forEach((d) => {
+          const dateStr = d.toISOString().split('T')[0];
+          const slots = getTimeSlotsForDate(d);
+          byDate[dateStr] = slots;
+        });
+        setAvailabilityByDate(byDate);
+      })
+      .finally(() => setAvailabilityLoading(false));
+  }, [isOpen]);
+
+  // Pre-fill from profile when signed in
+  useEffect(() => {
+    if (!profile) return;
+    setFormData((f) => ({
+      ...f,
+      email: profile.email || f.email,
+      firstName: profile.first_name || f.firstName,
+      lastName: profile.last_name || f.lastName,
+      companyName: profile.company || f.companyName,
+    }));
+  }, [profile?.email, profile?.first_name, profile?.last_name, profile?.company]);
+
+  const bookableDates = useMemo(() => {
+    const dates = Object.keys(availabilityByDate).filter((d) => (availabilityByDate[d]?.length ?? 0) > 0).sort();
+    if (dates.length > 0) return dates.map((d) => new Date(d + 'T12:00:00'));
+    return fallbackDates;
+  }, [availabilityByDate, fallbackDates]);
+
+  useEffect(() => {
+    const dateStr = selectedDate?.toISOString().split('T')[0];
+    const slots = availabilityByDate[dateStr];
+    if (!availabilityLoading && bookableDates.length > 0 && (!slots || slots.length === 0)) {
+      setSelectedDate(bookableDates[0]);
+      setSelectedTime('');
+    }
+  }, [availabilityLoading, availabilityByDate, bookableDates, selectedDate]);
+
+  // When opening the calendar step, show the month of the selected date
+  useEffect(() => {
+    if (step !== 'calendar' || !selectedDate) return;
+    const d = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
+    setCalendarViewMonth((prev) => (prev.getTime() !== d.getTime() ? d : prev));
+  }, [step, selectedDate?.getTime()]);
+
+  const availableSlotsForSelectedDate = useMemo(() => {
+    const dateStr = selectedDate?.toISOString().split('T')[0];
+    return availabilityByDate[dateStr] ?? getTimeSlotsForDate(selectedDate);
+  }, [selectedDate, availabilityByDate]);
+
+  const bookableDateSet = useMemo(
+    () => new Set(bookableDates.map((d) => d.toISOString().split('T')[0])),
+    [bookableDates]
+  );
+
+  // Calendly-style month grid: 6 rows × 7 (SUN–SAT). Each cell: { date, isCurrentMonth, isPast, isBookable }.
+  const calendarGrid = useMemo(() => {
+    const year = calendarViewMonth.getFullYear();
+    const month = calendarViewMonth.getMonth();
+    const first = new Date(year, month, 1);
+    const last = new Date(year, month + 1, 0);
+    const startOffset = first.getDay();
+    const daysInMonth = last.getDate();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const cells: { date: Date; isCurrentMonth: boolean; isPast: boolean; isBookable: boolean }[] = [];
+    const totalCells = 42;
+    for (let i = 0; i < totalCells; i++) {
+      const dayIndex = i - startOffset + 1;
+      let date: Date;
+      let isCurrentMonth: boolean;
+      if (dayIndex < 1) {
+        date = new Date(year, month, dayIndex);
+        isCurrentMonth = false;
+      } else if (dayIndex > daysInMonth) {
+        date = new Date(year, month + 1, dayIndex - daysInMonth);
+        isCurrentMonth = false;
+      } else {
+        date = new Date(year, month, dayIndex);
+        isCurrentMonth = true;
+      }
+      date.setHours(0, 0, 0, 0);
+      const dateStr = date.toISOString().split('T')[0];
+      const isPast = date < today;
+      const isBookable = bookableDateSet.has(dateStr);
+      cells.push({ date, isCurrentMonth, isPast, isBookable });
+    }
+    return cells;
+  }, [calendarViewMonth, bookableDateSet]);
+
+  const canProceedToPayment =
+    formData.firstName.trim() &&
+    formData.lastName.trim() &&
+    formData.email?.trim() &&
+    formData.phone.trim() &&
+    (formData.noCompany || formData.companyName.trim());
 
   const handlePayment = async () => {
     if (!selectedService || !selectedTime) return;
-
+    if (!canProceedToPayment) {
+      alert('Please fill in all required fields (or tick "I don\'t have a company" if applicable).');
+      return;
+    }
     if (!session) {
       setShowAuthPrompt(true);
       return;
@@ -63,50 +205,73 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
     setIsProcessing(true);
 
     try {
+      // Refresh session so the access_token is valid (avoids 401 from expired JWT)
+      const { data: { session: freshSession }, error: refreshError } = await supabase.auth.refreshSession();
+      const tokenSession = freshSession ?? session;
+      if (refreshError || !tokenSession?.access_token) {
+        setShowAuthPrompt(true);
+        alert('Your session expired. Please sign in again.');
+        setIsProcessing(false);
+        return;
+      }
+
+      const dateStr = selectedDate?.toISOString().split('T')[0];
       const { data: appointment, error: appointmentError } = await supabase
         .from('appointments')
         .insert({
-          user_id: session.user.id,
+          user_id: tokenSession.user.id,
           service_type: selectedService,
-          date: selectedDate?.toISOString().split('T')[0],
+          date: dateStr,
           time: selectedTime,
           status: 'pending',
+          first_name: formData.firstName.trim() || profile?.first_name,
+          last_name: formData.lastName.trim() || profile?.last_name,
+          email: formData.email?.trim() || profile?.email || tokenSession.user.email,
+          phone: formData.phone.trim() || null,
+          company_name: formData.noCompany ? null : (formData.companyName.trim() || profile?.company || null),
+          company_website: formData.noCompany ? null : (formData.companyWebsite.trim() || null),
+          no_company: formData.noCompany,
         })
         .select()
         .single();
 
       if (appointmentError) throw appointmentError;
 
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-checkout`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({
-            service_type: selectedService,
-            user_id: session.user.id,
-            appointment_id: appointment.id,
-            success_url: `${window.location.origin}?booking=success`,
-            cancel_url: `${window.location.origin}?booking=cancelled`,
-          }),
-        }
-      );
+      const customerEmail = formData.email?.trim() || profile?.email || tokenSession.user.email!;
+      // Call with anon key only (no JWT). Function has verify_jwt = false and validates appointment server-side.
+      const res = await fetch(`${supabaseUrl}/functions/v1/create-checkout`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': supabaseAnonKey,
+        },
+        body: JSON.stringify({
+          service_type: selectedService,
+          user_id: tokenSession.user.id,
+          appointment_id: appointment.id,
+          success_url: `${window.location.origin}?booking=success`,
+          cancel_url: `${window.location.origin}?booking=cancelled`,
+          customer_email: customerEmail || undefined,
+        }),
+      });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Payment initialization failed');
+      const checkoutData = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        if (res.status === 401) {
+          setShowAuthPrompt(true);
+          alert('Session expired. Please sign in again and try paying once more.');
+          setIsProcessing(false);
+          return;
+        }
+        throw new Error(checkoutData?.error || checkoutData?.message || 'Payment initialization failed');
       }
 
-      const { url } = await response.json();
-      window.location.href = url;
-
+      const url = checkoutData?.url;
+      if (url) window.location.href = url;
+      else throw new Error(checkoutData?.error || 'No checkout URL returned');
     } catch (error) {
       console.error('Payment error:', error);
-      alert('There was an error processing your payment. Please try again.');
+      alert(error instanceof Error ? error.message : 'There was an error processing your payment. Please try again.');
     } finally {
       setIsProcessing(false);
     }
@@ -147,7 +312,7 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
               </h2>
             </div>
             <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-full transition-colors">
-              <X className="w-6 h-6 text-gray-400" />
+              <X className="w-6 h-6 text-brand-muted-light" />
             </button>
           </div>
 
@@ -162,7 +327,7 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
                       className="text-left p-8 rounded-2xl border border-white/5 bg-white/[0.02] hover:border-fuchsia-500 transition-all"
                     >
                       <h3 className="text-2xl font-bold text-white mb-2">{s.title}</h3>
-                      <p className="text-gray-400 text-sm mb-8">{s.description}</p>
+                      <p className="text-brand-muted-light text-sm mb-8">{s.description}</p>
                       <span className="text-3xl font-bold text-white">{s.price}</span>
                     </button>
                   ))}
@@ -172,56 +337,188 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
               {step === 'calendar' && (
                 <motion.div key="calendar" className="flex flex-col md:flex-row gap-10">
                   <div className="flex-grow">
-                     <div className="grid grid-cols-7 gap-2">
-                       {Array.from({ length: 14 }).map((_, i) => {
-                         const d = new Date();
-                         d.setDate(d.getDate() + i);
-                         return (
-                           <button 
-                            key={i} 
-                            onClick={() => setSelectedDate(d)} 
-                            className={`h-10 rounded-lg text-sm ${d.toDateString() === selectedDate.toDateString() ? 'bg-fuchsia-500 text-white' : 'text-gray-400 hover:bg-white/5'}`}
-                           >
-                             {d.getDate()}
-                           </button>
-                         );
-                       })}
-                     </div>
+                    <h3 className="text-lg font-bold text-white mb-4">Select a Date & Time</h3>
+                    {availabilityLoading ? (
+                      <p className="text-brand-muted-light text-sm">Loading availability…</p>
+                    ) : (
+                      <>
+                        <div className="flex items-center justify-between mb-4">
+                          <button
+                            type="button"
+                            aria-label="Previous month"
+                            onClick={() => setCalendarViewMonth((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1))}
+                            className="w-10 h-10 rounded-full border border-white/20 text-white hover:bg-white/10 flex items-center justify-center"
+                          >
+                            <span className="sr-only">Previous</span>
+                            <ChevronLeft className="w-5 h-5" />
+                          </button>
+                          <span className="text-white font-semibold">
+                            {calendarViewMonth.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}
+                          </span>
+                          <button
+                            type="button"
+                            aria-label="Next month"
+                            onClick={() => setCalendarViewMonth((m) => new Date(m.getFullYear(), m.getMonth() + 1, 1))}
+                            className="w-10 h-10 rounded-full border border-white/20 text-white hover:bg-white/10 flex items-center justify-center"
+                          >
+                            <span className="sr-only">Next</span>
+                            <ChevronRight className="w-5 h-5" />
+                          </button>
+                        </div>
+                        <div className="grid grid-cols-7 gap-1 mb-2">
+                          {['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'].map((day) => (
+                            <div key={day} className="text-center text-xs font-medium text-brand-muted-light uppercase py-1">
+                              {day}
+                            </div>
+                          ))}
+                        </div>
+                        <div className="grid grid-cols-7 gap-1">
+                          {calendarGrid.map((cell, i) => {
+                            const isSelected = selectedDate && cell.date.toDateString() === selectedDate.toDateString();
+                            const canClick = cell.isCurrentMonth && cell.isBookable && !cell.isPast;
+                            return (
+                              <button
+                                key={i}
+                                type="button"
+                                disabled={!canClick}
+                                onClick={() => {
+                                  if (canClick) {
+                                    setSelectedDate(cell.date);
+                                    setSelectedTime('');
+                                  }
+                                }}
+                                className={`
+                                  aspect-square rounded-full text-sm font-medium flex items-center justify-center
+                                  ${!cell.isCurrentMonth ? 'text-white/20' : ''}
+                                  ${cell.isCurrentMonth && cell.isPast ? 'text-brand-muted-light/60' : ''}
+                                  ${cell.isCurrentMonth && !cell.isPast && !cell.isBookable ? 'text-brand-muted-light/60' : ''}
+                                  ${cell.isCurrentMonth && !cell.isPast && cell.isBookable ? 'text-white border border-white/30 hover:border-brand-accent hover:bg-white/5' : ''}
+                                  ${isSelected ? '!bg-brand-accent !border-brand-accent !text-white' : ''}
+                                `}
+                              >
+                                {cell.date.getDate()}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </>
+                    )}
                   </div>
-                  <div className="w-full md:w-64">
-                    <div className="grid grid-cols-1 gap-3">
-                      {getAvailableSlots(selectedDate).map((slot, idx) => (
-                        <button 
-                          key={idx} 
-                          onClick={() => setSelectedTime(slot.time)} 
-                          className={`py-3 px-4 rounded-xl text-sm font-bold border ${selectedTime === slot.time ? 'bg-fuchsia-500 border-fuchsia-500 text-white' : 'border-white/5 text-gray-300'}`}
-                        >
-                          {slot.time}
-                        </button>
-                      ))}
-                    </div>
-                    <Button className="mt-8 w-full" disabled={!selectedTime} onClick={() => setStep('details')}>Continue</Button>
+                  <div className="w-full md:w-72 shrink-0">
+                    {selectedDate && (
+                      <>
+                        <p className="text-brand-muted-light text-sm mb-3">
+                          {selectedDate.toLocaleDateString('en-GB', { weekday: 'long', month: 'long', day: 'numeric' })}
+                        </p>
+                        {availableSlotsForSelectedDate.length === 0 ? (
+                          <p className="text-brand-muted-light text-sm py-4">No slots left on this day. Pick another date.</p>
+                        ) : (
+                          <div className="flex flex-col gap-2">
+                            {availableSlotsForSelectedDate.map((time) => (
+                              <button
+                                key={time}
+                                type="button"
+                                onClick={() => setSelectedTime(time)}
+                                className={`py-3 px-4 rounded-xl text-sm font-medium border transition-all text-left ${selectedTime === time ? 'bg-brand-accent border-brand-accent text-white' : 'border-white/10 text-brand-muted-light hover:border-white/20 hover:text-white'}`}
+                              >
+                                {formatTimeLabel(time)}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        <Button className="mt-6 w-full" disabled={!selectedTime} onClick={() => setStep('details')}>
+                          Continue
+                        </Button>
+                      </>
+                    )}
                   </div>
                 </motion.div>
               )}
 
               {step === 'details' && (
-                <motion.div key="details" className="grid lg:grid-cols-12 gap-10">
-                  <div className="lg:col-span-7 space-y-6">
-                    <input 
-                      type="email" 
-                      value={formData.email} 
-                      onChange={(e) => setFormData({...formData, email: e.target.value})} 
-                      placeholder="Email" 
-                      className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-white" 
+                <motion.div key="details" className="space-y-8">
+                  <p className="text-brand-muted-light text-sm">A few details so we can confirm your booking and send the meeting link.</p>
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-brand-muted-light uppercase tracking-wider mb-1.5">First name *</label>
+                      <input
+                        type="text"
+                        value={formData.firstName}
+                        onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                        placeholder="First name"
+                        className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-brand-muted focus:outline-none focus:border-brand-accent"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-brand-muted-light uppercase tracking-wider mb-1.5">Last name *</label>
+                      <input
+                        type="text"
+                        value={formData.lastName}
+                        onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                        placeholder="Last name"
+                        className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-brand-muted focus:outline-none focus:border-brand-accent"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-brand-muted-light uppercase tracking-wider mb-1.5">Email *</label>
+                    <input
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      placeholder="you@company.com"
+                      className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-brand-muted focus:outline-none focus:border-brand-accent"
                     />
                   </div>
-                  <div className="lg:col-span-5">
-                    <div className="bg-white/[0.02] border border-white/10 rounded-2xl p-6">
-                      <Button className="w-full !py-6 text-xl" onClick={handlePayment} disabled={isProcessing}>
-                        {isProcessing ? 'Processing...' : `Pay ${SERVICES[selectedService].price}`}
-                      </Button>
-                    </div>
+                  <div>
+                    <label className="block text-xs font-bold text-brand-muted-light uppercase tracking-wider mb-1.5">Phone number *</label>
+                    <input
+                      type="tel"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      placeholder="07700 900000"
+                      className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-brand-muted focus:outline-none focus:border-brand-accent"
+                    />
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      id="noCompany"
+                      checked={formData.noCompany}
+                      onChange={(e) => setFormData({ ...formData, noCompany: e.target.checked, companyName: e.target.checked ? '' : formData.companyName, companyWebsite: e.target.checked ? '' : formData.companyWebsite })}
+                      className="rounded border-white/20 bg-white/5 text-brand-accent focus:ring-brand-accent"
+                    />
+                    <label htmlFor="noCompany" className="text-sm text-brand-muted-light cursor-pointer">I don&apos;t have a company</label>
+                  </div>
+                  {!formData.noCompany && (
+                    <>
+                      <div>
+                        <label className="block text-xs font-bold text-brand-muted-light uppercase tracking-wider mb-1.5">Company name *</label>
+                        <input
+                          type="text"
+                          value={formData.companyName}
+                          onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
+                          placeholder="Company name"
+                          className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-brand-muted focus:outline-none focus:border-brand-accent"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-brand-muted-light uppercase tracking-wider mb-1.5">Company website *</label>
+                        <input
+                          type="url"
+                          value={formData.companyWebsite}
+                          onChange={(e) => setFormData({ ...formData, companyWebsite: e.target.value })}
+                          placeholder="https://..."
+                          className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-brand-muted focus:outline-none focus:border-brand-accent"
+                        />
+                      </div>
+                    </>
+                  )}
+                  <div className="pt-4 border-t border-white/10">
+                    <p className="text-brand-muted-light text-xs mb-3">Your booking: {formatDateLabel(selectedDate)} at {selectedTime} · {SERVICES[selectedService].title}</p>
+                    <Button className="w-full !py-6 text-xl" onClick={handlePayment} disabled={isProcessing || !canProceedToPayment}>
+                      {isProcessing ? 'Processing...' : `Pay ${SERVICES[selectedService].price} & confirm`}
+                    </Button>
                   </div>
                 </motion.div>
               )}

@@ -10,7 +10,7 @@ export const ProblemSection: React.FC = () => {
           <span className="text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.15)]">Solving The Wrong Problem.</span>
         </h2>
         
-        <div className="space-y-6 text-xl md:text-2xl text-brand-muted leading-relaxed font-light">
+        <div className="space-y-6 text-xl md:text-2xl text-brand-muted-light leading-relaxed font-light">
           <p>
             You wake up every day and execute. You market. You optimize. You feel like you're moving a mountain, but when you look at the EBITDA at the end of the quarter, the needle hasn't moved.
           </p>
@@ -24,7 +24,7 @@ export const ProblemSection: React.FC = () => {
             </p>
           </div>
           
-          <p className="opacity-60 text-lg">
+          <p className="text-brand-muted-light text-lg">
             You've hired agencies that managed symptoms, not root causes. You don't need another tactic; you need a diagnosis.
           </p>
         </div>

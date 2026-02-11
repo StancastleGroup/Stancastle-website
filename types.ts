@@ -43,5 +43,7 @@ export interface Appointment {
   service_type: string;
   date: string;
   time: string;
-  status: 'booked' | 'completed' | 'cancelled';
+  status: 'pending' | 'paid' | 'booked' | 'completed' | 'cancelled';
+  zoom_join_url?: string | null;
+  zoom_meeting_id?: string | null;
 }

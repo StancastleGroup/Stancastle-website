@@ -13,11 +13,22 @@ import { Footer } from './components/Footer';
 import { BookingFlow } from './components/BookingFlow';
 import { AuthProvider } from './context/AuthContext';
 import { AnimatePresence, motion, useScroll, useSpring } from 'framer-motion';
+import { CheckCircle2 } from 'lucide-react';
 
 function App() {
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [initialServiceType, setInitialServiceType] = useState<'diagnostic' | 'partner' | undefined>();
-  
+  const [showBookingSuccess, setShowBookingSuccess] = useState(false);
+
+  // Show success message when returning from Stripe with ?booking=success
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('booking') === 'success') {
+      setShowBookingSuccess(true);
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, []);
+
   const { scrollYProgress } = useScroll();
   const scaleX = useSpring(scrollYProgress, {
     stiffness: 100,
@@ -46,8 +57,45 @@ function App() {
             <BookingFlow 
               isOpen={isBookingOpen} 
               onClose={() => setIsBookingOpen(false)} 
-              initialService={initialServiceType}
+              initialService={initialServiceType ?? 'diagnostic'}
             />
+          )}
+        </AnimatePresence>
+
+        {/* Post-payment success overlay */}
+        <AnimatePresence>
+          {showBookingSuccess && (
+            <>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 bg-black/90 backdrop-blur-xl z-[100]"
+                onClick={() => setShowBookingSuccess(false)}
+              />
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[101] w-full max-w-md mx-4 p-8 rounded-3xl bg-[#0f0f13] border border-white/10 shadow-2xl text-center"
+              >
+                <div className="flex justify-center mb-6">
+                  <div className="w-16 h-16 rounded-full bg-brand-accent/20 flex items-center justify-center">
+                    <CheckCircle2 className="w-10 h-10 text-brand-accent" />
+                  </div>
+                </div>
+                <h2 className="text-2xl font-serif font-bold text-white mb-2">Booking confirmed</h2>
+                <p className="text-brand-muted-light mb-6">Thank you. We&apos;ve received your payment and reserved your slot.</p>
+                <p className="text-white font-medium mb-1">Please check your email</p>
+                <p className="text-brand-muted-light text-sm mb-8">(including your spam folder) for confirmation and meeting details.</p>
+                <button
+                  onClick={() => setShowBookingSuccess(false)}
+                  className="px-8 py-3 rounded-xl bg-brand-accent text-white font-bold hover:opacity-90 transition-opacity"
+                >
+                  Done
+                </button>
+              </motion.div>
+            </>
           )}
         </AnimatePresence>
         
@@ -61,7 +109,7 @@ function App() {
           
           <div className="space-y-4 md:space-y-8">
             <Comparison />
-            <Services />
+            <Services onOpenBooking={handleOpenBooking} />
             <WhyUs />
             <Testimonials />
             <FAQ />

@@ -20,12 +20,12 @@ export const Comparison: React.FC = () => {
             Stop buying <br />
             <span className="text-brand-accent">theatre.</span>
           </h2>
-          <p className="text-brand-muted text-lg mb-8 leading-relaxed">
+          <p className="text-brand-muted-light text-lg mb-8 leading-relaxed">
             Most consultancy is performance art. It looks like work, sounds like progress, but leaves you with a massive bill and the same structural problems you started with. 
           </p>
           <div className="p-8 rounded-2xl bg-gradient-to-br from-fuchsia-900/20 to-purple-900/20 border border-brand-accent/20 shadow-xl">
             <h4 className="text-brand-accent font-bold mb-3 text-lg uppercase tracking-tight">The Stancastle Standard</h4>
-            <p className="text-gray-300 leading-relaxed">
+            <p className="text-brand-muted-light leading-relaxed">
               We prepare for hours before our first call. No "discovery" sessions that waste your time. Our team starts at the solution level immediately.
             </p>
           </div>
@@ -36,11 +36,11 @@ export const Comparison: React.FC = () => {
             {comparisonData.map((point, index) => (
               <div key={index} className="grid grid-cols-2 gap-4 group">
                 {/* Generic Side */}
-                <div className="p-6 rounded-l-xl bg-white/[0.02] border border-white/5 opacity-40 grayscale group-hover:grayscale-0 transition-all duration-500">
-                  <div className="flex items-center gap-2 mb-2 text-xs font-bold text-red-500/70 uppercase tracking-widest">
+                <div className="p-6 rounded-l-xl bg-white/[0.02] border border-white/5 opacity-60 grayscale group-hover:grayscale-0 group-hover:opacity-80 transition-all duration-500">
+                  <div className="flex items-center gap-2 mb-2 text-xs font-bold text-red-400/80 uppercase tracking-widest">
                     <X className="w-3 h-3" /> Generic Consultants
                   </div>
-                  <h3 className="text-brand-muted font-medium">{point.generic}</h3>
+                  <h3 className="text-brand-muted-light font-medium">{point.generic}</h3>
                 </div>
 
                 {/* Stancastle Side */}
@@ -50,7 +50,7 @@ export const Comparison: React.FC = () => {
                     <Check className="w-3 h-3" /> Stancastle
                   </div>
                   <h3 className="text-white font-bold text-lg relative z-10">{point.stancastle}</h3>
-                  <p className="text-[10px] text-brand-muted mt-2 uppercase tracking-widest opacity-40 relative z-10">{point.feature}</p>
+                  <p className="text-xs text-brand-muted mt-2 uppercase tracking-widest relative z-10">{point.feature}</p>
                 </div>
               </div>
             ))}

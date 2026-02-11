@@ -26,7 +26,7 @@ export const ContactForm: React.FC = () => {
                 Empty Promises.
               </span>
             </h2>
-            <p className="text-lg text-brand-muted mb-10 leading-relaxed">
+            <p className="text-lg text-brand-muted-light mb-10 leading-relaxed">
               If you're serious about building your business with structure and clarity, speak to us. 
               We only work with companies where we believe we can add significant value.
             </p>
@@ -48,7 +48,7 @@ export const ContactForm: React.FC = () => {
                   <div className="text-3xl md:text-4xl font-bold text-white mb-2 group-hover:text-fuchsia-200 transition-colors">
                     020 8064 2496
                   </div>
-                  <div className="flex items-center gap-2 text-sm text-gray-400">
+                  <div className="flex items-center gap-2 text-sm text-brand-muted-light">
                     <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
                     Available now for strategic inquiries
                   </div>
@@ -57,11 +57,11 @@ export const ContactForm: React.FC = () => {
 
               {/* Opening Hours */}
               <div className="bg-white/5 border border-white/10 rounded-2xl p-6 flex items-start gap-4">
-                <Clock className="w-6 h-6 text-gray-500 mt-1" />
+                <Clock className="w-6 h-6 text-brand-muted mt-1" />
                 <div>
                   <h4 className="text-white font-bold mb-1">Opening Times</h4>
-                  <p className="text-gray-400 text-sm"><span className="text-white font-medium">Monday - Saturday:</span> 8:00am - 6:00pm</p>
-                  <p className="text-gray-500 text-sm"><span className="text-gray-400 font-medium">Sunday:</span> Closed</p>
+                  <p className="text-brand-muted-light text-sm"><span className="text-white font-medium">Monday - Saturday:</span> 8:00am - 6:00pm</p>
+                  <p className="text-brand-muted text-sm"><span className="text-brand-muted-light font-medium">Sunday:</span> Closed</p>
                 </div>
               </div>
             </div>
@@ -77,7 +77,7 @@ export const ContactForm: React.FC = () => {
                     <CheckCircle2 className="w-10 h-10 text-green-500" />
                  </div>
                  <h3 className="text-2xl font-bold text-white mb-2">Message Sent</h3>
-                 <p className="text-gray-400">Our strategic team will review your enquiry and contact you shortly.</p>
+                 <p className="text-brand-muted-light">Our strategic team will review your enquiry and contact you shortly.</p>
                  <Button className="mt-8" variant="outline" onClick={() => setStatus('idle')}>Send Another</Button>
               </div>
             ) : (
@@ -86,41 +86,41 @@ export const ContactForm: React.FC = () => {
                 
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2 ml-1">Full Name</label>
+                    <label className="block text-xs font-bold text-brand-muted-light uppercase tracking-widest mb-2 ml-1">Full Name</label>
                     <input 
                       type="text" 
                       placeholder="John Doe"
                       required
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-gray-600 focus:outline-none focus:border-brand-accent transition-colors"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-brand-muted focus:outline-none focus:border-brand-accent transition-colors"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2 ml-1">Email Address</label>
+                    <label className="block text-xs font-bold text-brand-muted-light uppercase tracking-widest mb-2 ml-1">Email Address</label>
                     <input 
                       type="email" 
                       placeholder="john@company.com"
                       required
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-gray-600 focus:outline-none focus:border-brand-accent transition-colors"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-brand-muted focus:outline-none focus:border-brand-accent transition-colors"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2 ml-1">Phone Number</label>
+                    <label className="block text-xs font-bold text-brand-muted-light uppercase tracking-widest mb-2 ml-1">Phone Number</label>
                     <input 
                       type="tel" 
                       placeholder="07700 900000"
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-gray-600 focus:outline-none focus:border-brand-accent transition-colors"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-brand-muted focus:outline-none focus:border-brand-accent transition-colors"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2 ml-1">Tell us about your business</label>
+                    <label className="block text-xs font-bold text-brand-muted-light uppercase tracking-widest mb-2 ml-1">Tell us about your business</label>
                     <textarea 
                       rows={4}
                       placeholder="Current revenue, biggest bottleneck, etc..."
                       required
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-gray-600 focus:outline-none focus:border-brand-accent transition-colors resize-none"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-brand-muted focus:outline-none focus:border-brand-accent transition-colors resize-none"
                     ></textarea>
                   </div>
 

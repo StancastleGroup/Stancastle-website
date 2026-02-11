@@ -55,10 +55,10 @@ const FAQItem: React.FC<{
             : 'bg-white/[0.02] border-white/5 hover:border-white/20'
         }`}
       >
-        <span className={`text-lg md:text-xl font-bold transition-colors ${isOpen ? 'text-white' : 'text-gray-400 group-hover:text-gray-200'}`}>
+        <span className={`text-lg md:text-xl font-bold transition-colors ${isOpen ? 'text-white' : 'text-brand-muted-light group-hover:text-white'}`}>
           {item.question}
         </span>
-        <div className={`shrink-0 ml-4 p-2 rounded-lg transition-all duration-300 ${isOpen ? 'bg-brand-accent text-white rotate-180' : 'bg-white/5 text-gray-500'}`}>
+        <div className={`shrink-0 ml-4 p-2 rounded-lg transition-all duration-300 ${isOpen ? 'bg-brand-accent text-white rotate-180' : 'bg-white/5 text-brand-muted-light'}`}>
           {isOpen ? <Minus className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
         </div>
       </button>
@@ -72,7 +72,7 @@ const FAQItem: React.FC<{
             transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
             className="overflow-hidden"
           >
-            <div className="p-8 md:p-10 pt-4 text-gray-400 leading-relaxed text-lg whitespace-pre-wrap border-x border-b border-brand-accent/20 rounded-b-2xl bg-brand-accent/5">
+            <div className="p-8 md:p-10 pt-4 text-brand-muted-light leading-relaxed text-lg whitespace-pre-wrap border-x border-b border-brand-accent/20 rounded-b-2xl bg-brand-accent/5">
               <div className="prose prose-invert max-w-none">
                 {item.answer.split('\n\n').map((paragraph, i) => (
                   <p key={i} className={i !== 0 ? 'mt-4' : ''}>
@@ -109,7 +109,7 @@ export const FAQ: React.FC = () => {
               <HelpCircle className="w-8 h-8 text-brand-accent" />
             </div>
             <h2 className="font-serif text-5xl md:text-6xl font-bold text-white mb-6">Strategic FAQ</h2>
-            <p className="text-xl text-brand-muted max-w-2xl font-light">
+            <p className="text-xl text-brand-muted-light max-w-2xl font-light">
               We address the hidden objections sophisticated business owners have before they commit.
             </p>
           </motion.div>
@@ -128,7 +128,7 @@ export const FAQ: React.FC = () => {
 
         <div className="mt-20 p-8 rounded-3xl bg-gradient-to-r from-fuchsia-900/20 to-purple-900/20 border border-brand-accent/20 text-center">
           <h3 className="text-2xl font-serif font-bold text-white mb-4 italic">Still Have Questions?</h3>
-          <p className="text-gray-400 mb-8">
+          <p className="text-brand-muted-light mb-8">
             Our team is available for direct inquiries regarding multi-entity corporate structures or specific operational constraints.
           </p>
           <button 

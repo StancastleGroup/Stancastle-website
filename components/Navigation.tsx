@@ -30,7 +30,7 @@ const SocialLinks = ({ className = "" }: { className?: string }) => (
       href="https://www.instagram.com/stancastlegroup/" 
       target="_blank" 
       rel="noopener noreferrer"
-      className="text-gray-500 hover:text-brand-accent transition-all transform hover:scale-125"
+      className="text-brand-muted hover:text-brand-accent transition-all transform hover:scale-125"
       aria-label="Instagram"
     >
       <Instagram className="w-5 h-5" />
@@ -39,7 +39,7 @@ const SocialLinks = ({ className = "" }: { className?: string }) => (
       href="https://tiktok.com/@Stancastlegroup" 
       target="_blank" 
       rel="noopener noreferrer"
-      className="text-gray-500 hover:text-brand-accent transition-all transform hover:scale-125"
+      className="text-brand-muted hover:text-brand-accent transition-all transform hover:scale-125"
       aria-label="TikTok"
     >
       <TikTokIcon className="w-5 h-5" />
@@ -90,41 +90,43 @@ export const Navigation: React.FC<{ onOpenBooking: () => void }> = ({ onOpenBook
         }`}
       >
         <div className="container mx-auto px-6">
-          <div className={`flex items-center justify-between px-10 py-5 rounded-[2.5rem] transition-all duration-700 relative ${
+          <div className={`flex items-center justify-between gap-4 xl:gap-6 px-4 sm:px-6 xl:px-10 py-4 xl:py-5 rounded-2xl xl:rounded-[2.5rem] transition-all duration-700 relative ${
             isScrolled ? 'glass-panel shadow-2xl border-white/10' : 'bg-transparent'
           }`}>
-            {/* Logo */}
-            <a href="#" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="flex items-center gap-4 group relative z-10">
-              <div className="p-3 bg-gradient-to-br from-fuchsia-500 to-purple-700 rounded-2xl group-hover:shadow-[0_0_30px_rgba(217,70,239,0.5)] transition-all duration-500 transform group-hover:rotate-6">
-                <Castle className="w-6 h-6 text-white" />
+            {/* Logo - compact on small, full size on xl+ */}
+            <a href="#" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="flex items-center gap-2 sm:gap-4 group relative z-10 shrink-0 min-w-0">
+              <div className="p-2 sm:p-3 bg-gradient-to-br from-fuchsia-500 to-purple-700 rounded-xl sm:rounded-2xl group-hover:shadow-[0_0_30px_rgba(217,70,239,0.5)] transition-all duration-500 transform group-hover:rotate-6 shrink-0">
+                <Castle className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
               </div>
-              <span className="font-serif text-3xl font-bold tracking-tight text-white">
+              <span className="font-serif text-xl sm:text-3xl font-bold tracking-tight text-white truncate">
                 Stancastle
               </span>
             </a>
 
-            {/* Desktop Centered Links */}
-            <div className="hidden lg:flex items-center gap-14 absolute left-1/2 -translate-x-1/2">
-              {navItems.map((item) => (
-                <a
-                  key={item.label}
-                  href={item.href}
-                  onClick={(e) => handleNavClick(e, item.href)}
-                  className="text-[12px] font-black uppercase tracking-[0.35em] text-gray-400 hover:text-white transition-all relative group"
-                >
-                  {item.label}
-                  <span className="absolute -bottom-2 left-0 w-0 h-[2px] bg-brand-accent transition-all duration-500 group-hover:w-full" />
-                </a>
-              ))}
+            {/* Desktop: centered links only when enough width (xl = 1280px+) */}
+            <div className="hidden xl:flex flex-1 justify-center items-center min-w-0 px-4">
+              <div className="flex items-center gap-10 2xl:gap-14">
+                {navItems.map((item) => (
+                  <a
+                    key={item.label}
+                    href={item.href}
+                    onClick={(e) => handleNavClick(e, item.href)}
+                    className="text-[12px] font-black uppercase tracking-[0.35em] text-brand-muted-light hover:text-white transition-all relative group whitespace-nowrap"
+                  >
+                    {item.label}
+                    <span className="absolute -bottom-2 left-0 w-0 h-[2px] bg-brand-accent transition-all duration-500 group-hover:w-full" />
+                  </a>
+                ))}
+              </div>
             </div>
 
-            {/* Right Actions */}
-            <div className="hidden lg:flex items-center gap-8 relative z-10">
-              <SocialLinks className="mr-2" />
-              <div className="h-6 w-px bg-white/10 mx-2" />
+            {/* Desktop: right actions (social, sign in, button) - same breakpoint */}
+            <div className="hidden xl:flex items-center gap-6 2xl:gap-8 shrink-0">
+              <SocialLinks />
+              <div className="h-6 w-px bg-white/10 shrink-0" />
               
               {session ? (
-                <div className="flex items-center gap-5 pl-2">
+                <div className="flex items-center gap-5">
                   <div className="text-right">
                     <p className="text-sm font-black text-white leading-none mb-1">{profile?.first_name}</p>
                     <span className="text-[9px] text-brand-accent uppercase tracking-widest font-black">Account Active</span>
@@ -134,24 +136,26 @@ export const Navigation: React.FC<{ onOpenBooking: () => void }> = ({ onOpenBook
                   </Button>
                 </div>
               ) : (
-                <div className="flex items-center gap-8 pl-2">
+                <div className="flex items-center gap-6 2xl:gap-8">
                   <button 
                     onClick={() => openAuth('signin')}
-                    className="flex items-center gap-2 text-[12px] font-black uppercase tracking-[0.3em] text-white hover:text-brand-accent transition-all group"
+                    className="flex items-center gap-2 text-[12px] font-black uppercase tracking-[0.3em] text-white hover:text-brand-accent transition-all group whitespace-nowrap"
                   >
-                    <LogIn className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+                    <LogIn className="w-4 h-4 group-hover:-translate-x-1 transition-transform shrink-0" />
                     Sign In
                   </button>
-                  <Button variant="primary" size="sm" className="!px-8 !py-4 text-[11px] font-black uppercase tracking-[0.3em] rounded-2xl" onClick={onOpenBooking}>
+                  <Button variant="primary" size="sm" className="!px-8 !py-4 text-[11px] font-black uppercase tracking-[0.3em] rounded-2xl shrink-0" onClick={onOpenBooking}>
                     Book Diagnostic
                   </Button>
                 </div>
               )}
             </div>
 
+            {/* Hamburger: show below xl so nav never overlaps */}
             <button 
-              className="lg:hidden text-white p-3 hover:bg-white/10 rounded-2xl transition-all relative z-10"
+              className="xl:hidden text-white p-3 hover:bg-white/10 rounded-2xl transition-all relative z-10 shrink-0"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
             >
               {isMobileMenuOpen ? <X className="w-8 h-8" /> : <Menu className="w-8 h-8" />}
             </button>
@@ -164,7 +168,7 @@ export const Navigation: React.FC<{ onOpenBooking: () => void }> = ({ onOpenBook
               initial={{ opacity: 0, y: -20, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -20, scale: 0.95 }}
-              className="lg:hidden absolute top-full left-6 right-6 mt-6 glass-panel border border-white/10 rounded-[3rem] overflow-hidden shadow-2xl z-[110]"
+              className="xl:hidden absolute top-full left-6 right-6 mt-6 glass-panel border border-white/10 rounded-[3rem] overflow-hidden shadow-2xl z-[110]"
             >
               <div className="p-12 flex flex-col gap-8">
                 {navItems.map((item) => (
