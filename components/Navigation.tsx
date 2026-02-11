@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, Castle, User, Instagram, LogIn } from 'lucide-react';
+import { Menu, X, User, Instagram, LogIn } from 'lucide-react';
 import { Button } from './ui/Button';
 import { NavItem } from '../types';
 import { useAuth } from '../context/AuthContext';
@@ -93,14 +93,13 @@ export const Navigation: React.FC<{ onOpenBooking: () => void }> = ({ onOpenBook
           <div className={`flex items-center justify-between gap-4 xl:gap-6 px-4 sm:px-6 xl:px-10 py-4 xl:py-5 rounded-2xl xl:rounded-[2.5rem] transition-all duration-700 relative ${
             isScrolled ? 'glass-panel shadow-2xl border-white/10' : 'bg-transparent'
           }`}>
-            {/* Logo - compact on small, full size on xl+ */}
-            <a href="#" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="flex items-center gap-2 sm:gap-4 group relative z-10 shrink-0 min-w-0">
-              <div className="p-2 sm:p-3 bg-gradient-to-br from-fuchsia-500 to-purple-700 rounded-xl sm:rounded-2xl group-hover:shadow-[0_0_30px_rgba(217,70,239,0.5)] transition-all duration-500 transform group-hover:rotate-6 shrink-0">
-                <Castle className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-              </div>
-              <span className="font-serif text-xl sm:text-3xl font-bold tracking-tight text-white truncate">
-                Stancastle
-              </span>
+            {/* Logo - full STANCASTLE wordmark */}
+            <a href="#" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="flex items-center group relative z-10 shrink-0 min-w-0">
+              <img
+                src="/logo.png"
+                alt="Stancastle"
+                className="h-16 sm:h-20 xl:h-24 w-auto scale-x-[1.5] origin-left object-contain object-left transition-all duration-500 group-hover:opacity-90"
+              />
             </a>
 
             {/* Desktop: centered links only when enough width (xl = 1280px+) */}
