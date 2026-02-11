@@ -5,6 +5,14 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+/** Normalize tenant ID: Azure may show "Tenant ID: xxx" and users can paste "id xxx". Use only the GUID. */
+function normalizeTenantId(value: string | undefined): string {
+  const s = (value ?? 'common').trim();
+  const lower = s.toLowerCase();
+  if (lower.startsWith('id ')) return s.slice(3).trim();
+  return s;
+}
+
 /**
  * GET: returns client_id and tenant_id for building the Microsoft login URL (no secrets).
  * POST: exchanges authorization code for refresh_token. Body: { code, redirect_uri }.
@@ -14,7 +22,7 @@ serve(async (req) => {
 
   if (req.method === 'GET') {
     const clientId = Deno.env.get('OUTLOOK_CLIENT_ID')?.trim();
-    const tenant = (Deno.env.get('OUTLOOK_TENANT_ID') ?? 'common').trim();
+    const tenant = normalizeTenantId(Deno.env.get('OUTLOOK_TENANT_ID'));
     return new Response(
       JSON.stringify({ client_id: clientId || null, tenant_id: tenant }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -32,7 +40,7 @@ serve(async (req) => {
 
     const clientId = Deno.env.get('OUTLOOK_CLIENT_ID')?.trim();
     const clientSecret = Deno.env.get('OUTLOOK_CLIENT_SECRET')?.trim();
-    const tenant = (Deno.env.get('OUTLOOK_TENANT_ID') ?? 'common').trim();
+    const tenant = normalizeTenantId(Deno.env.get('OUTLOOK_TENANT_ID'));
     if (!clientId || !clientSecret) {
       return new Response(
         JSON.stringify({ error: 'OUTLOOK_CLIENT_ID or OUTLOOK_CLIENT_SECRET not set in Supabase secrets' }),

@@ -145,11 +145,11 @@ serve(async (req) => {
 
     if (!orderRes.ok) {
       const err = await orderRes.text();
-      console.error('Resend order email error:', err);
-      return new Response(JSON.stringify({ error: 'Failed to send order confirmation' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      console.error('Resend order email error:', orderRes.status, err);
+      return new Response(
+        JSON.stringify({ error: 'Failed to send order confirmation', resend_status: orderRes.status, resend_error: err }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Email 2 – Meeting Details (with Zoom link when available)

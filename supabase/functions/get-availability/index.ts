@@ -30,12 +30,25 @@ function getBookableDatesInRange(from: Date, to: Date): string[] {
   return out;
 }
 
+/** Normalize tenant ID (strip "id " prefix if pasted from Azure UI). */
+function normalizeTenantId(value: string | undefined): string {
+  const s = (value ?? 'common').trim();
+  if (s.toLowerCase().startsWith('id ')) return s.slice(3).trim();
+  return s;
+}
+
+/** Sanitize refresh token: no newlines or extra spaces (Supabase secret can get pasted with line breaks). */
+function sanitizeRefreshToken(value: string | undefined): string {
+  if (!value) return '';
+  return value.replace(/\s+/g, ' ').trim();
+}
+
 /** Get Microsoft Graph access token using refresh token (for contact@stancastle.com). */
 async function getOutlookAccessToken(): Promise<string | null> {
   const clientId = Deno.env.get('OUTLOOK_CLIENT_ID')?.trim();
   const clientSecret = Deno.env.get('OUTLOOK_CLIENT_SECRET')?.trim();
-  const tenant = (Deno.env.get('OUTLOOK_TENANT_ID') ?? 'common').trim();
-  const refreshToken = Deno.env.get('OUTLOOK_REFRESH_TOKEN')?.trim();
+  const tenant = normalizeTenantId(Deno.env.get('OUTLOOK_TENANT_ID'));
+  const refreshToken = sanitizeRefreshToken(Deno.env.get('OUTLOOK_REFRESH_TOKEN'));
   if (!clientId || !clientSecret || !refreshToken) return null;
 
   const body = new URLSearchParams({
@@ -43,7 +56,7 @@ async function getOutlookAccessToken(): Promise<string | null> {
     client_id: clientId,
     client_secret: clientSecret,
     refresh_token: refreshToken,
-    scope: 'https://graph.microsoft.com/.default Calendars.Read Calendars.ReadWrite',
+    scope: 'offline_access Calendars.Read Calendars.ReadWrite',
   });
   const res = await fetch(`https://login.microsoftonline.com/${tenant}/oauth2/v2.0/token`, {
     method: 'POST',

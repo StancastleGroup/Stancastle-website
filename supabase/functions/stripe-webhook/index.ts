@@ -116,19 +116,32 @@ async function createZoomMeeting(
   return result as { join_url: string; meeting_id: string } | null;
 }
 
+/** Normalize tenant ID (strip "id " prefix if pasted from Azure UI). */
+function normalizeTenantId(value: string | undefined): string {
+  const s = (value ?? 'common').trim();
+  if (s.toLowerCase().startsWith('id ')) return s.slice(3).trim();
+  return s;
+}
+
+/** Sanitize refresh token: no newlines or extra spaces (Supabase secret can get pasted with line breaks). */
+function sanitizeRefreshToken(value: string | undefined): string {
+  if (!value) return '';
+  return value.replace(/\s+/g, ' ').trim();
+}
+
 /** Get Microsoft Graph access token (for contact@stancastle.com Outlook calendar). */
 async function getOutlookAccessToken(): Promise<string | null> {
   const clientId = Deno.env.get('OUTLOOK_CLIENT_ID')?.trim();
   const clientSecret = Deno.env.get('OUTLOOK_CLIENT_SECRET')?.trim();
-  const tenant = (Deno.env.get('OUTLOOK_TENANT_ID') ?? 'common').trim();
-  const refreshToken = Deno.env.get('OUTLOOK_REFRESH_TOKEN')?.trim();
+  const tenant = normalizeTenantId(Deno.env.get('OUTLOOK_TENANT_ID'));
+  const refreshToken = sanitizeRefreshToken(Deno.env.get('OUTLOOK_REFRESH_TOKEN'));
   if (!clientId || !clientSecret || !refreshToken) return null;
   const body = new URLSearchParams({
     grant_type: 'refresh_token',
     client_id: clientId,
     client_secret: clientSecret,
     refresh_token: refreshToken,
-    scope: 'https://graph.microsoft.com/.default Calendars.ReadWrite',
+    scope: 'offline_access Calendars.Read Calendars.ReadWrite',
   });
   const res = await fetch(`https://login.microsoftonline.com/${tenant}/oauth2/v2.0/token`, {
     method: 'POST',
@@ -156,12 +169,14 @@ async function createOutlookCalendarEvent(
   if (!email) return;
   const token = await getOutlookAccessToken();
   if (!token) return;
-  const [h = '0', m = '0'] = String(timeStr).split(':').map(Number);
-  const start = `${dateStr}T${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`;
+  // Normalize date to YYYY-MM-DD (Supabase can return full ISO e.g. 2026-02-12T00:00:00+00:00)
+  const dateOnly = dateStr.slice(0, 10);
+  const [h = 0, m = 0] = String(timeStr).split(':').map(Number);
+  const start = `${dateOnly}T${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`;
   const endM = h * 60 + m + durationMinutes;
   const endH = Math.floor(endM / 60);
   const endMin = endM % 60;
-  const end = `${dateStr}T${String(endH).padStart(2, '0')}:${String(endMin).padStart(2, '0')}:00`;
+  const end = `${dateOnly}T${String(endH).padStart(2, '0')}:${String(endMin).padStart(2, '0')}:00`;
   const res = await fetch(`https://graph.microsoft.com/v1.0/users/${encodeURIComponent(email)}/calendar/events`, {
     method: 'POST',
     headers: {
