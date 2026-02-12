@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, HTMLMotionProps } from 'framer-motion';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -13,7 +13,13 @@ export const Button: React.FC<ButtonProps & HTMLMotionProps<"button">> = ({
   className = '',
   ...props 
 }) => {
-  const baseStyles = "relative overflow-hidden font-bold transition-all duration-300 rounded-xl flex items-center justify-center gap-3 focus:outline-none focus:ring-2 focus:ring-brand-accent/40 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95";
+  const [isMobile, setIsMobile] = useState(false);
+  
+  useEffect(() => {
+    setIsMobile(window.innerWidth < 768);
+  }, []);
+  
+  const baseStyles = "relative overflow-hidden font-bold transition-all duration-300 rounded-xl flex items-center justify-center gap-3 focus:outline-none focus:ring-2 focus:ring-brand-accent/40 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 touch-manipulation";
   
   const variants = {
     primary: "bg-brand-accent text-white shadow-[0_10px_30px_rgba(217,70,239,0.3)] hover:shadow-[0_15px_40px_rgba(217,70,239,0.5)] border-0",
@@ -27,6 +33,21 @@ export const Button: React.FC<ButtonProps & HTMLMotionProps<"button">> = ({
     md: "px-7 py-3.5 text-sm uppercase tracking-[0.2em]",
     lg: "px-10 py-5 text-base uppercase tracking-[0.25em]"
   };
+
+  // Use regular button on mobile to avoid Framer Motion touch issues
+  if (isMobile) {
+    return (
+      <button
+        className={`${baseStyles} ${variants[variant]} ${sizes[size]} ${className}`}
+        {...props}
+      >
+        <span className="relative z-10">{children}</span>
+        {variant === 'primary' && (
+          <div className="absolute inset-0 z-0 bg-gradient-to-r from-fuchsia-500 to-purple-600 opacity-0 hover:opacity-100 transition-opacity duration-500" />
+        )}
+      </button>
+    );
+  }
 
   return (
     <motion.button

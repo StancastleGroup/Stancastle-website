@@ -775,8 +775,13 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
                     <p className="text-brand-muted-light text-xs mb-3">Your booking: {formatDateLabel(selectedDate)} at {selectedTime} · {SERVICES[selectedService].title}</p>
                     <Button 
                       className="w-full !py-6 text-xl" 
-                      onClick={handlePayment}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handlePayment();
+                      }}
                       disabled={isProcessing || !canProceedToPayment || !selectedTime}
+                      type="button"
                     >
                       {isProcessing 
                         ? 'Processing...' 
