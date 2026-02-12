@@ -14,19 +14,36 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultVi
   const [view, setView] = useState<'signin' | 'signup'>(defaultView);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [company, setCompany] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setPasswordError(null);
 
     try {
       if (view === 'signup') {
+        // Validate password match
+        if (password !== confirmPassword) {
+          setPasswordError('Passwords do not match');
+          setLoading(false);
+          return;
+        }
+        
+        // Validate password strength (minimum 6 characters)
+        if (password.length < 6) {
+          setPasswordError('Password must be at least 6 characters long');
+          setLoading(false);
+          return;
+        }
+
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
@@ -161,12 +178,49 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultVi
                   required 
                   type="password" 
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white focus:outline-none focus:border-brand-accent transition-colors"
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    if (passwordError) setPasswordError(null);
+                  }}
+                  className={`w-full bg-white/5 border rounded-xl pl-10 pr-4 py-3 text-white focus:outline-none transition-colors ${
+                    passwordError ? 'border-red-500/50 focus:border-red-500' : 'border-white/10 focus:border-brand-accent'
+                  }`}
                   placeholder="••••••••"
+                  minLength={view === 'signup' ? 6 : undefined}
                 />
               </div>
+              {view === 'signup' && password && password.length < 6 && (
+                <p className="text-red-400 text-xs mt-1">Password must be at least 6 characters</p>
+              )}
             </div>
+
+            {view === 'signup' && (
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-brand-muted-light uppercase ml-1">Confirm Password</label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-3.5 w-4 h-4 text-brand-muted" />
+                  <input 
+                    required 
+                    type="password" 
+                    value={confirmPassword}
+                    onChange={(e) => {
+                      setConfirmPassword(e.target.value);
+                      if (passwordError) setPasswordError(null);
+                    }}
+                    onBlur={() => {
+                      if (password !== confirmPassword && confirmPassword) {
+                        setPasswordError('Passwords do not match');
+                      }
+                    }}
+                    className={`w-full bg-white/5 border rounded-xl pl-10 pr-4 py-3 text-white focus:outline-none transition-colors ${
+                      passwordError ? 'border-red-500/50 focus:border-red-500' : 'border-white/10 focus:border-brand-accent'
+                    }`}
+                    placeholder="••••••••"
+                  />
+                </div>
+                {passwordError && <p className="text-red-400 text-xs mt-1">{passwordError}</p>}
+              </div>
+            )}
 
             <Button type="submit" className="w-full mt-6" disabled={loading}>
               {loading ? 'Processing...' : view === 'signin' ? 'Sign In' : 'Create Account'}
@@ -178,7 +232,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultVi
             <p className="text-brand-muted-light text-sm">
               {view === 'signin' ? "Don't have an account? " : "Already have an account? "}
               <button 
-                onClick={() => setView(view === 'signin' ? 'signup' : 'signin')}
+                onClick={() => {
+                  setView(view === 'signin' ? 'signup' : 'signin');
+                  setPasswordError(null);
+                  setConfirmPassword('');
+                }}
                 className="text-brand-accent font-bold hover:text-white transition-colors"
               >
                 {view === 'signin' ? 'Register Now' : 'Sign In'}

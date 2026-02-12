@@ -59,6 +59,7 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
     companyWebsite: '',
     noCompany: false,
   });
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   // Real availability: fetched per month when user views that month (current month on open, then on prev/next)
   const [availabilityByDate, setAvailabilityByDate] = useState<Record<string, string[]>>({});
@@ -212,6 +213,58 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
     return cells;
   }, [calendarViewMonth, bookableDateSet]);
 
+  // Validation functions
+  const validateEmail = (email: string): string => {
+    if (!email.trim()) return 'Email is required';
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) return 'Please enter a valid email address';
+    return '';
+  };
+
+  const validatePhone = (phone: string): string => {
+    if (!phone.trim()) return 'Phone number is required';
+    // UK phone: +44, 0, or international format. Remove spaces/dashes for validation
+    const cleaned = phone.replace(/[\s\-\(\)]/g, '');
+    const phoneRegex = /^(\+44|0|44)?[1-9]\d{8,9}$/;
+    if (!phoneRegex.test(cleaned)) return 'Please enter a valid UK phone number';
+    return '';
+  };
+
+  const validateUrl = (url: string): string => {
+    if (!url.trim()) return 'Company website is required';
+    try {
+      const urlObj = new URL(url.trim());
+      if (!['http:', 'https:'].includes(urlObj.protocol)) {
+        return 'Website must start with http:// or https://';
+      }
+      return '';
+    } catch {
+      return 'Please enter a valid website URL (e.g., https://example.com)';
+    }
+  };
+
+  const validateForm = (): boolean => {
+    const errors: Record<string, string> = {};
+    
+    if (!formData.firstName.trim()) errors.firstName = 'First name is required';
+    if (!formData.lastName.trim()) errors.lastName = 'Last name is required';
+    
+    const emailError = validateEmail(formData.email);
+    if (emailError) errors.email = emailError;
+    
+    const phoneError = validatePhone(formData.phone);
+    if (phoneError) errors.phone = phoneError;
+    
+    if (!formData.noCompany) {
+      if (!formData.companyName.trim()) errors.companyName = 'Company name is required';
+      const urlError = validateUrl(formData.companyWebsite);
+      if (urlError) errors.companyWebsite = urlError;
+    }
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const canProceedToPayment =
     formData.firstName.trim() &&
     formData.lastName.trim() &&
@@ -221,10 +274,12 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
 
   const handlePayment = async () => {
     if (!selectedService || !selectedTime) return;
-    if (!canProceedToPayment) {
-      alert('Please fill in all required fields (or tick "I don\'t have a company" if applicable).');
+    
+    // Validate form data types
+    if (!validateForm()) {
       return;
     }
+    
     if (!session) {
       alert('Please sign in first to schedule a call. Click "Sign In" in the navigation menu to continue.');
       return;
@@ -472,20 +527,32 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
                       <input
                         type="text"
                         value={formData.firstName}
-                        onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                        onChange={(e) => {
+                          setFormData({ ...formData, firstName: e.target.value });
+                          if (formErrors.firstName) setFormErrors({ ...formErrors, firstName: '' });
+                        }}
                         placeholder="First name"
-                        className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-brand-muted focus:outline-none focus:border-brand-accent"
+                        className={`w-full bg-white/[0.03] border rounded-xl px-4 py-3 text-white placeholder:text-brand-muted focus:outline-none transition-colors ${
+                          formErrors.firstName ? 'border-red-500/50 focus:border-red-500' : 'border-white/10 focus:border-brand-accent'
+                        }`}
                       />
+                      {formErrors.firstName && <p className="text-red-400 text-xs mt-1">{formErrors.firstName}</p>}
                     </div>
                     <div>
                       <label className="block text-xs font-bold text-brand-muted-light uppercase tracking-wider mb-1.5">Last name *</label>
                       <input
                         type="text"
                         value={formData.lastName}
-                        onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                        onChange={(e) => {
+                          setFormData({ ...formData, lastName: e.target.value });
+                          if (formErrors.lastName) setFormErrors({ ...formErrors, lastName: '' });
+                        }}
                         placeholder="Last name"
-                        className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-brand-muted focus:outline-none focus:border-brand-accent"
+                        className={`w-full bg-white/[0.03] border rounded-xl px-4 py-3 text-white placeholder:text-brand-muted focus:outline-none transition-colors ${
+                          formErrors.lastName ? 'border-red-500/50 focus:border-red-500' : 'border-white/10 focus:border-brand-accent'
+                        }`}
                       />
+                      {formErrors.lastName && <p className="text-red-400 text-xs mt-1">{formErrors.lastName}</p>}
                     </div>
                   </div>
                   <div>
@@ -493,20 +560,46 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
                     <input
                       type="email"
                       value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      onChange={(e) => {
+                        setFormData({ ...formData, email: e.target.value });
+                        if (formErrors.email) {
+                          const error = validateEmail(e.target.value);
+                          setFormErrors({ ...formErrors, email: error });
+                        }
+                      }}
+                      onBlur={(e) => {
+                        const error = validateEmail(e.target.value);
+                        if (error) setFormErrors({ ...formErrors, email: error });
+                      }}
                       placeholder="you@company.com"
-                      className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-brand-muted focus:outline-none focus:border-brand-accent"
+                      className={`w-full bg-white/[0.03] border rounded-xl px-4 py-3 text-white placeholder:text-brand-muted focus:outline-none transition-colors ${
+                        formErrors.email ? 'border-red-500/50 focus:border-red-500' : 'border-white/10 focus:border-brand-accent'
+                      }`}
                     />
+                    {formErrors.email && <p className="text-red-400 text-xs mt-1">{formErrors.email}</p>}
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-brand-muted-light uppercase tracking-wider mb-1.5">Phone number *</label>
                     <input
                       type="tel"
                       value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      placeholder="07700 900000"
-                      className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-brand-muted focus:outline-none focus:border-brand-accent"
+                      onChange={(e) => {
+                        setFormData({ ...formData, phone: e.target.value });
+                        if (formErrors.phone) {
+                          const error = validatePhone(e.target.value);
+                          setFormErrors({ ...formErrors, phone: error });
+                        }
+                      }}
+                      onBlur={(e) => {
+                        const error = validatePhone(e.target.value);
+                        if (error) setFormErrors({ ...formErrors, phone: error });
+                      }}
+                      placeholder="07700 900000 or +44 7700 900000"
+                      className={`w-full bg-white/[0.03] border rounded-xl px-4 py-3 text-white placeholder:text-brand-muted focus:outline-none transition-colors ${
+                        formErrors.phone ? 'border-red-500/50 focus:border-red-500' : 'border-white/10 focus:border-brand-accent'
+                      }`}
                     />
+                    {formErrors.phone && <p className="text-red-400 text-xs mt-1">{formErrors.phone}</p>}
                   </div>
                   <div className="flex items-center gap-3">
                     <input
@@ -525,20 +618,39 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
                         <input
                           type="text"
                           value={formData.companyName}
-                          onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
+                          onChange={(e) => {
+                            setFormData({ ...formData, companyName: e.target.value });
+                            if (formErrors.companyName) setFormErrors({ ...formErrors, companyName: '' });
+                          }}
                           placeholder="Company name"
-                          className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-brand-muted focus:outline-none focus:border-brand-accent"
+                          className={`w-full bg-white/[0.03] border rounded-xl px-4 py-3 text-white placeholder:text-brand-muted focus:outline-none transition-colors ${
+                            formErrors.companyName ? 'border-red-500/50 focus:border-red-500' : 'border-white/10 focus:border-brand-accent'
+                          }`}
                         />
+                        {formErrors.companyName && <p className="text-red-400 text-xs mt-1">{formErrors.companyName}</p>}
                       </div>
                       <div>
                         <label className="block text-xs font-bold text-brand-muted-light uppercase tracking-wider mb-1.5">Company website *</label>
                         <input
                           type="url"
                           value={formData.companyWebsite}
-                          onChange={(e) => setFormData({ ...formData, companyWebsite: e.target.value })}
-                          placeholder="https://..."
-                          className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-brand-muted focus:outline-none focus:border-brand-accent"
+                          onChange={(e) => {
+                            setFormData({ ...formData, companyWebsite: e.target.value });
+                            if (formErrors.companyWebsite) {
+                              const error = validateUrl(e.target.value);
+                              setFormErrors({ ...formErrors, companyWebsite: error });
+                            }
+                          }}
+                          onBlur={(e) => {
+                            const error = validateUrl(e.target.value);
+                            if (error) setFormErrors({ ...formErrors, companyWebsite: error });
+                          }}
+                          placeholder="https://example.com"
+                          className={`w-full bg-white/[0.03] border rounded-xl px-4 py-3 text-white placeholder:text-brand-muted focus:outline-none transition-colors ${
+                            formErrors.companyWebsite ? 'border-red-500/50 focus:border-red-500' : 'border-white/10 focus:border-brand-accent'
+                          }`}
                         />
+                        {formErrors.companyWebsite && <p className="text-red-400 text-xs mt-1">{formErrors.companyWebsite}</p>}
                       </div>
                     </>
                   )}
