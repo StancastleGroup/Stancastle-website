@@ -43,6 +43,18 @@ function sanitizeRefreshToken(value: string | undefined): string {
   return value.replace(/\s+/g, ' ').trim();
 }
 
+/** Normalize time format to HH:mm (e.g., "8:00" -> "08:00", "09:30:00" -> "09:30"). */
+function normalizeTime(time: string): string {
+  if (!time || typeof time !== 'string') {
+    console.warn(`[get-availability] normalizeTime received invalid input:`, time);
+    return time || '';
+  }
+  if (!time.includes(':')) return time;
+  const parts = time.split(':').slice(0, 2);
+  const normalized = parts.map((s) => s.padStart(2, '0')).join(':');
+  return normalized;
+}
+
 /** Get Microsoft Graph access token using refresh token (for contact@stancastle.com). */
 async function getOutlookAccessToken(): Promise<string | null> {
   const clientId = Deno.env.get('OUTLOOK_CLIENT_ID')?.trim();
@@ -148,23 +160,59 @@ serve(async (req) => {
     fromDate.setHours(0, 0, 0, 0);
     toDate.setHours(23, 59, 59, 999);
 
-    const fromStr = fromDate.toISOString().slice(0, 10);
-    const toStr = toDate.toISOString().slice(0, 10);
+    const fromStr = fromDate.toISOString().slice(0, 10); // YYYY-MM-DD
+    const toStr = toDate.toISOString().slice(0, 10); // YYYY-MM-DD
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
 
-    const { data: appointments } = await supabase
+    // Query all booked appointments in the date range
+    const { data: appointments, error: queryError } = await supabase
       .from('appointments')
-      .select('date, time')
+      .select('date, time, status')
       .in('status', ['pending', 'paid', 'booked'])
       .gte('date', fromStr)
       .lte('date', toStr);
 
+    if (queryError) {
+      console.error('[get-availability] Error querying appointments:', queryError);
+    }
+
+    // Build a set of all booked slot keys (date + time) for fast lookup
     const bookedSet = new Set<string>();
-    (appointments ?? []).forEach((a: { date: string; time: string }) => bookedSet.add(`${a.date}T${a.time}`));
+    (appointments ?? []).forEach((a: { date: string | Date; time: string; status: string }) => {
+      // Normalize date: extract YYYY-MM-DD format
+      // Supabase DATE columns can return strings like "2026-02-16" or Date objects
+      let dateStr: string;
+      if (typeof a.date === 'string') {
+        // Handle both "2026-02-16" and "2026-02-16T00:00:00Z" formats
+        dateStr = a.date.split('T')[0].split(' ')[0]; // Take first part before T or space
+      } else if (a.date instanceof Date) {
+        dateStr = a.date.toISOString().slice(0, 10);
+      } else {
+        // Fallback: convert to string and extract date part
+        const dateStrRaw = String(a.date);
+        dateStr = dateStrRaw.split('T')[0].split(' ')[0];
+      }
+      
+      // Ensure dateStr is in YYYY-MM-DD format
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+        console.warn(`[get-availability] Invalid date format: ${a.date} -> ${dateStr}`);
+        return; // Skip this appointment if date format is invalid
+      }
+      
+      // Normalize time: ensure HH:mm format (e.g., "8:00" -> "08:00", "08:00:00" -> "08:00")
+      const timeNormalized = normalizeTime(a.time);
+      if (!timeNormalized) {
+        console.warn(`[get-availability] Invalid time format: ${a.time}`);
+        return; // Skip this appointment if time format is invalid
+      }
+      
+      const key = `${dateStr}T${timeNormalized}`;
+      bookedSet.add(key);
+    });
 
     const dates = getBookableDatesInRange(fromDate, toDate);
     const outlookEmail = Deno.env.get('OUTLOOK_EMAIL')?.trim();
@@ -192,24 +240,41 @@ serve(async (req) => {
         }
         for (const dateStr of dates) {
           const freeSlots = byDate[dateStr] ?? [];
-          const available = freeSlots.filter((t) => !bookedSet.has(`${dateStr}T${t}`));
+          // Filter out any slots that are already booked
+          const available = freeSlots.filter((t) => {
+            const timeNormalized = normalizeTime(t);
+            const key = `${dateStr}T${timeNormalized}`;
+            return !bookedSet.has(key);
+          });
           result.push({ date: dateStr, slots: available });
         }
       } else {
+        // Fallback to rule-based slots if Outlook fails
         for (const dateStr of dates) {
           const d = new Date(dateStr + 'T12:00:00Z');
           const dayOfWeek = d.getUTCDay();
           const ruleSlots = SLOTS_BY_DAY[dayOfWeek] ?? [];
-          const available = ruleSlots.filter((t) => !bookedSet.has(`${dateStr}T${t}`));
+          // Filter out any slots that are already booked
+          const available = ruleSlots.filter((t) => {
+            const timeNormalized = normalizeTime(t);
+            const key = `${dateStr}T${timeNormalized}`;
+            return !bookedSet.has(key);
+          });
           result.push({ date: dateStr, slots: available });
         }
       }
     } else {
+      // No Outlook integration - use rule-based slots only
       for (const dateStr of dates) {
         const d = new Date(dateStr + 'T12:00:00Z');
         const dayOfWeek = d.getUTCDay();
         const ruleSlots = SLOTS_BY_DAY[dayOfWeek] ?? [];
-        const available = ruleSlots.filter((t) => !bookedSet.has(`${dateStr}T${t}`));
+        // Filter out any slots that are already booked
+        const available = ruleSlots.filter((t) => {
+          const timeNormalized = normalizeTime(t);
+          const key = `${dateStr}T${timeNormalized}`;
+          return !bookedSet.has(key);
+        });
         result.push({ date: dateStr, slots: available });
       }
     }

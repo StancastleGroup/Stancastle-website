@@ -71,8 +71,8 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
     d.setHours(0, 0, 0, 0);
     return d;
   });
-  // Track which months we've already fetched so we don't re-fetch when navigating back
-  const [fetchedMonths, setFetchedMonths] = useState<Set<string>>(() => new Set());
+  // Note: We always fetch fresh availability to ensure booked slots don't appear
+  // Removed fetchedMonths cache to prevent stale data
 
   const monthKey = useMemo(
     () => `${calendarViewMonth.getFullYear()}-${String(calendarViewMonth.getMonth() + 1).padStart(2, '0')}`,
@@ -99,8 +99,22 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
           (data.dates ?? []).forEach((d: { date: string; slots: string[] }) => {
             byDate[d.date] = d.slots ?? [];
           });
-          setAvailabilityByDate((prev) => ({ ...prev, ...byDate }));
-          setFetchedMonths((prev) => new Set(prev).add(`${y}-${String(m + 1).padStart(2, '0')}`));
+          // Replace (not merge) availability for this month to ensure booked slots don't appear
+          setAvailabilityByDate((prev) => {
+            const updated = { ...prev };
+            // Remove all dates from this month first
+            const monthStart = `${y}-${String(m + 1).padStart(2, '0')}-01`;
+            const monthEnd = `${y}-${String(m + 1).padStart(2, '0')}-31`;
+            Object.keys(updated).forEach((dateStr) => {
+              if (dateStr >= monthStart && dateStr <= monthEnd) {
+                delete updated[dateStr];
+              }
+            });
+            // Add fresh availability for this month
+            Object.assign(updated, byDate);
+            return updated;
+          });
+          // Always fetch fresh - no caching
         })
         .catch(() => {
           const byDate: Record<string, string[]> = {};
@@ -111,24 +125,25 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
             d.setDate(d.getDate() + 1);
           }
           setAvailabilityByDate((prev) => ({ ...prev, ...byDate }));
-          setFetchedMonths((prev) => new Set(prev).add(`${y}-${String(m + 1).padStart(2, '0')}`));
+          // Don't track fetchedMonths anymore - we always fetch fresh
+          // setFetchedMonths((prev) => new Set(prev).add(`${y}-${String(m + 1).padStart(2, '0')}`));
         })
         .finally(() => setAvailabilityLoading(false));
     },
     []
   );
 
-  // When calendar is open, fetch the currently viewed month if we don't have it yet
+  // When calendar step is active, always fetch fresh availability (ensures booked slots don't appear)
   useEffect(() => {
-    if (!isOpen) return;
-    if (fetchedMonths.has(monthKey)) return;
+    if (!isOpen || step !== 'calendar') return;
+    // Always fetch fresh to ensure we exclude any newly booked slots
+    // Don't check fetchedMonths - we want fresh data every time to avoid showing booked slots
     fetchAvailabilityForMonth(calendarViewMonth);
-  }, [isOpen, monthKey, calendarViewMonth, fetchedMonths, fetchAvailabilityForMonth]);
+  }, [isOpen, step, monthKey, calendarViewMonth, fetchAvailabilityForMonth]);
 
-  // When modal closes, clear cache so next open we fetch current month again
+  // When modal closes, clear availability cache so next open we fetch fresh data
   useEffect(() => {
     if (!isOpen) {
-      setFetchedMonths(new Set());
       setAvailabilityByDate({});
     }
   }, [isOpen]);
@@ -299,6 +314,43 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
       }
 
       const dateStr = selectedDate?.toISOString().split('T')[0];
+      
+      // CRITICAL: Check if slot is still available before booking (prevents double-booking race condition)
+      const { data: existingBooking, error: checkError } = await supabase
+        .from('appointments')
+        .select('id')
+        .eq('date', dateStr)
+        .eq('time', selectedTime)
+        .in('status', ['pending', 'paid', 'booked'])
+        .maybeSingle();
+      
+      if (checkError) {
+        console.error('[BookingFlow] Error checking availability:', checkError);
+        throw new Error('Failed to verify slot availability. Please try again.');
+      }
+      
+      if (existingBooking) {
+        alert(`Sorry, this time slot (${dateStr} at ${selectedTime}) has just been booked by someone else. Please select another time.`);
+        setIsProcessing(false);
+        // Refresh availability for this date to update the UI
+        const monthKey = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}`;
+        // Force refresh by clearing this month's availability
+        setAvailabilityByDate((prev) => {
+          const updated = { ...prev };
+          const monthStart = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-01`;
+          const monthEnd = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-31`;
+          Object.keys(updated).forEach((dateStr) => {
+            if (dateStr >= monthStart && dateStr <= monthEnd) {
+              delete updated[dateStr];
+            }
+          });
+          return updated;
+        });
+        // Trigger a fresh fetch
+        fetchAvailabilityForMonth(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1));
+        return;
+      }
+
       const { data: appointment, error: appointmentError } = await supabase
         .from('appointments')
         .insert({
