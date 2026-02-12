@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ArrowRight, ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, CheckCircle2 } from 'lucide-react';
 import { supabase, supabaseUrl, supabaseAnonKey } from '../lib/supabase';
@@ -60,9 +60,9 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
     noCompany: false,
   });
 
-  // Real availability: from get-availability API (Outlook + DB) or fallback to rule-based 90-min slots
+  // Real availability: fetched per month when user views that month (current month on open, then on prev/next)
   const [availabilityByDate, setAvailabilityByDate] = useState<Record<string, string[]>>({});
-  const [availabilityLoading, setAvailabilityLoading] = useState(true);
+  const [availabilityLoading, setAvailabilityLoading] = useState(false);
   // Calendar UI: which month is shown in the month picker (for prev/next)
   const [calendarViewMonth, setCalendarViewMonth] = useState<Date>(() => {
     const d = new Date();
@@ -70,39 +70,66 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
     d.setHours(0, 0, 0, 0);
     return d;
   });
+  // Track which months we've already fetched so we don't re-fetch when navigating back
+  const [fetchedMonths, setFetchedMonths] = useState<Set<string>>(() => new Set());
 
+  const monthKey = useMemo(
+    () => `${calendarViewMonth.getFullYear()}-${String(calendarViewMonth.getMonth() + 1).padStart(2, '0')}`,
+    [calendarViewMonth]
+  );
+
+  const fetchAvailabilityForMonth = useCallback(
+    (viewMonth: Date) => {
+      const y = viewMonth.getFullYear();
+      const m = viewMonth.getMonth();
+      const from = new Date(y, m, 1);
+      const to = new Date(y, m + 1, 0);
+      const fromStr = from.toISOString().split('T')[0];
+      const toStr = to.toISOString().split('T')[0];
+      setAvailabilityLoading(true);
+      fetch(`${supabaseUrl}/functions/v1/get-availability`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', apikey: supabaseAnonKey },
+        body: JSON.stringify({ from_date: fromStr, to_date: toStr }),
+      })
+        .then((r) => r.json())
+        .then((data) => {
+          const byDate: Record<string, string[]> = {};
+          (data.dates ?? []).forEach((d: { date: string; slots: string[] }) => {
+            byDate[d.date] = d.slots ?? [];
+          });
+          setAvailabilityByDate((prev) => ({ ...prev, ...byDate }));
+          setFetchedMonths((prev) => new Set(prev).add(`${y}-${String(m + 1).padStart(2, '0')}`));
+        })
+        .catch(() => {
+          const byDate: Record<string, string[]> = {};
+          const d = new Date(from);
+          while (d.getTime() <= to.getTime()) {
+            const dateStr = d.toISOString().split('T')[0];
+            byDate[dateStr] = getTimeSlotsForDate(new Date(d));
+            d.setDate(d.getDate() + 1);
+          }
+          setAvailabilityByDate((prev) => ({ ...prev, ...byDate }));
+          setFetchedMonths((prev) => new Set(prev).add(`${y}-${String(m + 1).padStart(2, '0')}`));
+        })
+        .finally(() => setAvailabilityLoading(false));
+    },
+    []
+  );
+
+  // When calendar is open, fetch the currently viewed month if we don't have it yet
   useEffect(() => {
     if (!isOpen) return;
-    const from = new Date();
-    from.setHours(0, 0, 0, 0);
-    const to = new Date(from);
-    to.setDate(to.getDate() + 90);
-    const fromStr = from.toISOString().split('T')[0];
-    const toStr = to.toISOString().split('T')[0];
-    setAvailabilityLoading(true);
-    fetch(`${supabaseUrl}/functions/v1/get-availability`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', apikey: supabaseAnonKey },
-      body: JSON.stringify({ from_date: fromStr, to_date: toStr }),
-    })
-      .then((r) => r.json())
-      .then((data) => {
-        const byDate: Record<string, string[]> = {};
-        (data.dates ?? []).forEach((d: { date: string; slots: string[] }) => {
-          byDate[d.date] = d.slots ?? [];
-        });
-        setAvailabilityByDate(byDate);
-      })
-      .catch(() => {
-        const byDate: Record<string, string[]> = {};
-        fallbackDates.forEach((d) => {
-          const dateStr = d.toISOString().split('T')[0];
-          const slots = getTimeSlotsForDate(d);
-          byDate[dateStr] = slots;
-        });
-        setAvailabilityByDate(byDate);
-      })
-      .finally(() => setAvailabilityLoading(false));
+    if (fetchedMonths.has(monthKey)) return;
+    fetchAvailabilityForMonth(calendarViewMonth);
+  }, [isOpen, monthKey, calendarViewMonth, fetchedMonths, fetchAvailabilityForMonth]);
+
+  // When modal closes, clear cache so next open we fetch current month again
+  useEffect(() => {
+    if (!isOpen) {
+      setFetchedMonths(new Set());
+      setAvailabilityByDate({});
+    }
   }, [isOpen]);
 
   // Pre-fill from profile when signed in
