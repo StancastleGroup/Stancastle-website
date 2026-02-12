@@ -42,7 +42,17 @@ export const Button: React.FC<ButtonProps & HTMLMotionProps<"button">> = ({
         type={type || 'button'}
         disabled={disabled}
         className={`${baseStyles} ${variants[variant]} ${sizes[size]} ${className}`}
-        onClick={disabled ? undefined : onClick}
+        onClick={(e) => {
+          if (disabled) {
+            e.preventDefault();
+            e.stopPropagation();
+            return;
+          }
+          if (onClick) {
+            // Ensure onClick is called synchronously for mobile redirects
+            onClick(e);
+          }
+        }}
         {...restProps}
       >
         <span className="relative z-10">{children}</span>

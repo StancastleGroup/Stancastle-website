@@ -65,6 +65,7 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
   const [availabilityByDate, setAvailabilityByDate] = useState<Record<string, string[]>>({});
   const [availabilityLoading, setAvailabilityLoading] = useState(false);
   const fetchingRef = useRef<string>(''); // Track which month is currently being fetched
+  const redirectUrlRef = useRef<string | null>(null); // Store redirect URL for mobile compatibility
   // Calendar UI: which month is shown in the month picker (for prev/next)
   const [calendarViewMonth, setCalendarViewMonth] = useState<Date>(() => {
     const d = new Date();
@@ -404,12 +405,38 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
         throw new Error('Invalid checkout URL format');
       }
 
-      // Redirect to Stripe - must happen synchronously for mobile browsers
+      // Redirect to Stripe - critical for mobile compatibility
       console.log('[BookingFlow] Redirecting to Stripe checkout:', url);
       
-      // Direct assignment - mobile browsers handle this best when done synchronously
-      // Don't await anything after this line
-      window.location.href = url;
+      // Store URL in ref for potential retry
+      redirectUrlRef.current = url;
+      
+      // Mobile browsers are strict about redirects after async operations
+      // Try multiple methods to ensure redirect works on all devices
+      try {
+        // Method 1: window.location.replace (works better on some mobile browsers)
+        window.location.replace(url);
+      } catch (err1) {
+        console.warn('[BookingFlow] Replace failed, trying href:', err1);
+        try {
+          // Method 2: window.location.href (standard method)
+          window.location.href = url;
+        } catch (err2) {
+          console.warn('[BookingFlow] Href failed, trying window.open:', err2);
+          try {
+            // Method 3: window.open with _self (some mobile browsers allow this)
+            const opened = window.open(url, '_self');
+            if (!opened) {
+              // Method 4: Last resort - show URL to user
+              console.error('[BookingFlow] All redirect methods failed');
+              alert(`Please visit: ${url}`);
+            }
+          } catch (err3) {
+            console.error('[BookingFlow] All redirect methods failed:', err3);
+            alert(`Please visit: ${url}`);
+          }
+        }
+      }
       
       // Don't set isProcessing to false - we're redirecting
       return;
@@ -767,13 +794,21 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
                     <p className="text-brand-muted-light text-xs mb-3">Your booking: {formatDateLabel(selectedDate)} at {selectedTime} · {SERVICES[selectedService].title}</p>
                     <Button 
                       className="w-full !py-6 text-xl" 
-                      onClick={() => {
+                      onClick={async (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
                         console.log('[BookingFlow] Pay button clicked, isProcessing:', isProcessing, 'canProceed:', canProceedToPayment, 'selectedTime:', selectedTime);
+                        
                         if (!isProcessing && canProceedToPayment && selectedTime) {
-                          handlePayment().catch((err) => {
+                          try {
+                            await handlePayment();
+                          } catch (err) {
                             console.error('[BookingFlow] Payment handler error:', err);
                             setIsProcessing(false);
-                          });
+                            redirectUrlRef.current = null; // Clear on error
+                          }
+                        } else {
+                          console.warn('[BookingFlow] Button click ignored:', { isProcessing, canProceedToPayment, selectedTime });
                         }
                       }}
                       disabled={isProcessing || !canProceedToPayment || !selectedTime}
