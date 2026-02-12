@@ -306,18 +306,26 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
     (formData.noCompany || formData.companyName.trim());
 
   const handlePayment = async () => {
-    if (!selectedService || !selectedTime) return;
+    console.log('[BookingFlow] handlePayment called', { selectedService, selectedTime, hasSession: !!session });
+    
+    if (!selectedService || !selectedTime) {
+      console.warn('[BookingFlow] Missing service or time');
+      return;
+    }
     
     // Validate form data types
     if (!validateForm()) {
+      console.warn('[BookingFlow] Form validation failed');
       return;
     }
     
     if (!session) {
+      console.warn('[BookingFlow] No session');
       alert('Please sign in first to schedule a call. Click "Sign In" in the navigation menu to continue.');
       return;
     }
 
+    console.log('[BookingFlow] Starting payment process');
     setIsProcessing(true);
 
     try {
@@ -332,66 +340,10 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
       }
 
       const dateStr = selectedDate?.toISOString().split('T')[0];
-      
-      // CRITICAL: Check if slot is still available before booking (prevents double-booking race condition)
-      const { data: existingBooking, error: checkError } = await supabase
-        .from('appointments')
-        .select('id')
-        .eq('date', dateStr)
-        .eq('time', selectedTime)
-        .in('status', ['pending', 'paid', 'booked'])
-        .maybeSingle();
-      
-      if (checkError) {
-        console.error('[BookingFlow] Error checking availability:', checkError);
-        throw new Error('Failed to verify slot availability. Please try again.');
-      }
-      
-      if (existingBooking) {
-        alert(`Sorry, this time slot (${dateStr} at ${selectedTime}) has just been booked by someone else. Please select another time.`);
-        setIsProcessing(false);
-        // Refresh availability for this date to update the UI
-        const monthKey = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}`;
-        // Force refresh by clearing this month's availability
-        setAvailabilityByDate((prev) => {
-          const updated = { ...prev };
-          const monthStart = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-01`;
-          const monthEnd = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-31`;
-          Object.keys(updated).forEach((dateStr) => {
-            if (dateStr >= monthStart && dateStr <= monthEnd) {
-              delete updated[dateStr];
-            }
-          });
-          return updated;
-        });
-        // Trigger a fresh fetch
-        fetchAvailabilityForMonth(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1));
-        return;
-      }
-
-      const { data: appointment, error: appointmentError } = await supabase
-        .from('appointments')
-        .insert({
-          user_id: tokenSession.user.id,
-          service_type: selectedService,
-          date: dateStr,
-          time: selectedTime,
-          status: 'pending',
-          first_name: formData.firstName.trim() || profile?.first_name,
-          last_name: formData.lastName.trim() || profile?.last_name,
-          email: formData.email?.trim() || profile?.email || tokenSession.user.email,
-          phone: formData.phone.trim() || null,
-          company_name: formData.noCompany ? null : (formData.companyName.trim() || profile?.company || null),
-          company_website: formData.noCompany ? null : (formData.companyWebsite.trim() || null),
-          no_company: formData.noCompany,
-        })
-        .select()
-        .single();
-
-      if (appointmentError) throw appointmentError;
-
       const customerEmail = formData.email?.trim() || profile?.email || tokenSession.user.email!;
-      // Call with anon key only (no JWT). Function has verify_jwt = false and validates appointment server-side.
+      
+      // Don't create appointment yet - only create after payment succeeds
+      // Pass booking details to create-checkout, which will store them in Stripe metadata
       const res = await fetch(`${supabaseUrl}/functions/v1/create-checkout`, {
         method: 'POST',
         headers: {
@@ -401,14 +353,33 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
         body: JSON.stringify({
           service_type: selectedService,
           user_id: tokenSession.user.id,
-          appointment_id: appointment.id,
+          // Booking details (will be stored in Stripe metadata and used to create appointment after payment)
+          date: dateStr,
+          time: selectedTime,
+          first_name: formData.firstName.trim() || profile?.first_name || '',
+          last_name: formData.lastName.trim() || profile?.last_name || '',
+          email: customerEmail || '',
+          phone: formData.phone.trim() || null,
+          company_name: formData.noCompany ? null : (formData.companyName.trim() || profile?.company || null),
+          company_website: formData.noCompany ? null : (formData.companyWebsite.trim() || null),
+          no_company: formData.noCompany || false,
           success_url: `${window.location.origin}?booking=success`,
           cancel_url: `${window.location.origin}?booking=cancelled`,
           customer_email: customerEmail || undefined,
         }),
       });
 
-      const checkoutData = await res.json().catch(() => ({}));
+      let checkoutData: any = {};
+      try {
+        const text = await res.text();
+        checkoutData = text ? JSON.parse(text) : {};
+      } catch (err) {
+        console.error('[BookingFlow] Failed to parse checkout response:', err, 'Response text:', await res.text());
+        throw new Error('Invalid response from payment server');
+      }
+      
+      console.log('[BookingFlow] Checkout response:', { status: res.status, ok: res.ok, data: checkoutData });
+      
       if (!res.ok) {
         if (res.status === 401) {
           setShowAuthPrompt(true);
@@ -416,18 +387,39 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
           setIsProcessing(false);
           return;
         }
-        throw new Error(checkoutData?.error || checkoutData?.message || 'Payment initialization failed');
+        console.error('[BookingFlow] Checkout failed:', checkoutData);
+        throw new Error(checkoutData?.error || checkoutData?.message || `Payment initialization failed (${res.status})`);
       }
 
       const url = checkoutData?.url;
-      if (url) window.location.href = url;
-      else throw new Error(checkoutData?.error || 'No checkout URL returned');
+      console.log('[BookingFlow] Checkout URL received:', url, 'Type:', typeof url);
+      
+      if (!url || typeof url !== 'string') {
+        console.error('[BookingFlow] Invalid checkout URL:', url, 'Full response:', checkoutData);
+        throw new Error(checkoutData?.error || checkoutData?.message || 'No checkout URL returned from payment server');
+      }
+      
+      if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        console.error('[BookingFlow] Invalid URL format:', url);
+        throw new Error('Invalid checkout URL format');
+      }
+
+      // Redirect to Stripe - must happen synchronously for mobile browsers
+      console.log('[BookingFlow] Redirecting to Stripe checkout:', url);
+      
+      // Direct assignment - mobile browsers handle this best when done synchronously
+      // Don't await anything after this line
+      window.location.href = url;
+      
+      // Don't set isProcessing to false - we're redirecting
+      return;
     } catch (error) {
-      console.error('Payment error:', error);
-      alert(error instanceof Error ? error.message : 'There was an error processing your payment. Please try again.');
-    } finally {
+      console.error('[BookingFlow] Payment error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'There was an error processing your payment. Please try again.';
+      alert(errorMessage);
       setIsProcessing(false);
     }
+    // Note: setIsProcessing(false) is NOT called on success because we redirect
   };
 
   if (!isOpen) return null;
@@ -775,10 +767,14 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
                     <p className="text-brand-muted-light text-xs mb-3">Your booking: {formatDateLabel(selectedDate)} at {selectedTime} · {SERVICES[selectedService].title}</p>
                     <Button 
                       className="w-full !py-6 text-xl" 
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        handlePayment();
+                      onClick={() => {
+                        console.log('[BookingFlow] Pay button clicked, isProcessing:', isProcessing, 'canProceed:', canProceedToPayment, 'selectedTime:', selectedTime);
+                        if (!isProcessing && canProceedToPayment && selectedTime) {
+                          handlePayment().catch((err) => {
+                            console.error('[BookingFlow] Payment handler error:', err);
+                            setIsProcessing(false);
+                          });
+                        }
                       }}
                       disabled={isProcessing || !canProceedToPayment || !selectedTime}
                       type="button"

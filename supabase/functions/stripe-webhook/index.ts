@@ -224,96 +224,129 @@ serve(async (req) => {
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session;
-        const { appointment_id, user_id, service_type } = session.metadata || {};
+        const { 
+          user_id, 
+          service_type, 
+          date, 
+          time, 
+          first_name, 
+          last_name, 
+          email, 
+          phone, 
+          company_name, 
+          company_website, 
+          no_company 
+        } = session.metadata || {};
 
-        if (appointment_id) {
-          const { data: appointment } = await supabase
-            .from('appointments')
-            .select('date, time, email')
-            .eq('id', appointment_id)
-            .single();
+        if (!user_id || !service_type || !date || !time) {
+          console.error('[stripe-webhook] Missing required metadata for appointment creation:', { user_id, service_type, date, time });
+          break;
+        }
 
+        // Create appointment record AFTER payment succeeds
+        const { data: appointment, error: appointmentError } = await supabase
+          .from('appointments')
+          .insert({
+            user_id,
+            service_type,
+            date,
+            time,
+            status: 'paid', // Directly set to 'paid' since payment succeeded
+            stripe_session_id: session.id,
+            amount_paid: session.amount_total,
+            first_name: first_name || null,
+            last_name: last_name || null,
+            email: email || session.customer_email || null,
+            phone: phone || null,
+            company_name: company_name || null,
+            company_website: company_website || null,
+            no_company: no_company === 'true',
+          })
+          .select()
+          .single();
+
+        if (appointmentError) {
+          console.error('[stripe-webhook] Error creating appointment:', appointmentError);
+          break;
+        }
+
+        console.log('[stripe-webhook] Appointment created:', appointment.id);
+
+        const durationMinutes = service_type === 'partner' ? 60 : 90;
+        let zoomJoinUrl: string | null = null;
+        let zoomMeetingId: string | null = null;
+        
+        if (appointment.date && appointment.time) {
+          console.log('[stripe-webhook] Creating Zoom meeting for', appointment.date, appointment.time);
+          const zoom = await createZoomMeeting(
+            appointment.date,
+            appointment.time,
+            service_type || 'diagnostic',
+            durationMinutes
+          );
+          if (zoom) {
+            zoomJoinUrl = zoom.join_url;
+            zoomMeetingId = zoom.meeting_id;
+            console.log('[stripe-webhook] Zoom meeting created:', zoomMeetingId);
+            
+            // Update appointment with Zoom details
+            await supabase
+              .from('appointments')
+              .update({
+                zoom_join_url: zoomJoinUrl,
+                zoom_meeting_id: zoomMeetingId,
+              })
+              .eq('id', appointment.id);
+          } else {
+            console.log('[stripe-webhook] Zoom meeting was not created (check logs above for credentials or API errors)');
+          }
+        } else {
+          console.log('[stripe-webhook] Skipping Zoom: appointment missing date or time', appointment?.date, appointment?.time);
+        }
+
+        // Add meeting to contact@stancastle.com's Outlook calendar (so you see it)
+        const customerEmail = appointment.email || session.customer_email;
+        if (zoomJoinUrl && appointment.date && appointment.time && customerEmail) {
           const durationMinutes = service_type === 'partner' ? 60 : 90;
-          let zoomJoinUrl: string | null = null;
-          let zoomMeetingId: string | null = null;
-          if (appointment?.date && appointment?.time) {
-            console.log('[stripe-webhook] Creating Zoom meeting for', appointment.date, appointment.time);
-            const zoom = await createZoomMeeting(
-              appointment.date,
-              appointment.time,
-              service_type || 'diagnostic',
-              durationMinutes
-            );
-            if (zoom) {
-              zoomJoinUrl = zoom.join_url;
-              zoomMeetingId = zoom.meeting_id;
-              console.log('[stripe-webhook] Zoom meeting created:', zoomMeetingId);
+          const subject = service_type === 'partner'
+            ? 'Partner Programme – ' + customerEmail
+            : 'Diagnostic Session – ' + customerEmail;
+          const bodyHtml = `<p>Zoom: <a href="${zoomJoinUrl}">${zoomJoinUrl}</a></p>`;
+          createOutlookCalendarEvent(
+            appointment.date,
+            appointment.time,
+            durationMinutes,
+            subject,
+            bodyHtml,
+            customerEmail
+          ).catch((e) => console.error('[stripe-webhook] Outlook event error:', e));
+        }
+
+        // Trigger booking emails (Order Confirmation + Meeting Details)
+        const bookingEmailsSecret = Deno.env.get('BOOKING_EMAILS_SECRET');
+        const supabaseUrl = Deno.env.get('SUPABASE_URL');
+        if (!bookingEmailsSecret || !supabaseUrl) {
+          console.warn('Booking emails skipped: BOOKING_EMAILS_SECRET or SUPABASE_URL not set');
+        } else {
+          try {
+            const emailUrl = `${supabaseUrl}/functions/v1/send-booking-emails`;
+            console.log('Calling send-booking-emails for appointment:', appointment.id);
+            const res = await fetch(emailUrl, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-booking-secret': bookingEmailsSecret,
+              },
+              body: JSON.stringify({ appointment_id: appointment.id }),
+            });
+            const body = await res.text();
+            if (!res.ok) {
+              console.error('send-booking-emails failed:', res.status, body);
             } else {
-              console.log('[stripe-webhook] Zoom meeting was not created (check logs above for credentials or API errors)');
+              console.log('send-booking-emails ok:', body);
             }
-          } else {
-            console.log('[stripe-webhook] Skipping Zoom: appointment missing date or time', appointment?.date, appointment?.time);
-          }
-
-          const { error: appointmentError } = await supabase
-            .from('appointments')
-            .update({
-              status: 'paid',
-              stripe_session_id: session.id,
-              amount_paid: session.amount_total,
-              ...(zoomJoinUrl && { zoom_join_url: zoomJoinUrl }),
-              ...(zoomMeetingId && { zoom_meeting_id: zoomMeetingId }),
-            })
-            .eq('id', appointment_id);
-
-          if (appointmentError) {
-            console.error('[stripe-webhook] Error updating appointment (missing zoom_join_url/zoom_meeting_id columns?):', appointmentError);
-          }
-
-          // Add meeting to contact@stancastle.com's Outlook calendar (so you see it)
-          const customerEmail = (appointment as { email?: string })?.email;
-          if (zoomJoinUrl && appointment?.date && appointment?.time && customerEmail) {
-            const durationMinutes = service_type === 'partner' ? 60 : 90;
-            const subject = service_type === 'partner'
-              ? 'Partner Programme – ' + customerEmail
-              : 'Diagnostic Session – ' + customerEmail;
-            const bodyHtml = `<p>Zoom: <a href="${zoomJoinUrl}">${zoomJoinUrl}</a></p>`;
-            createOutlookCalendarEvent(
-              appointment.date,
-              appointment.time,
-              durationMinutes,
-              subject,
-              bodyHtml,
-              customerEmail
-            ).catch((e) => console.error('[stripe-webhook] Outlook event error:', e));
-          }
-
-          // Trigger booking emails (Order Confirmation + Meeting Details)
-          const bookingEmailsSecret = Deno.env.get('BOOKING_EMAILS_SECRET');
-          const supabaseUrl = Deno.env.get('SUPABASE_URL');
-          if (!bookingEmailsSecret || !supabaseUrl) {
-            console.warn('Booking emails skipped: BOOKING_EMAILS_SECRET or SUPABASE_URL not set');
-          } else {
-            try {
-              const emailUrl = `${supabaseUrl}/functions/v1/send-booking-emails`;
-              console.log('Calling send-booking-emails for appointment:', appointment_id);
-              const res = await fetch(emailUrl, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'x-booking-secret': bookingEmailsSecret,
-                },
-                body: JSON.stringify({ appointment_id }),
-              });
-              const body = await res.text();
-              if (!res.ok) {
-                console.error('send-booking-emails failed:', res.status, body);
-              } else {
-                console.log('send-booking-emails ok:', body);
-              }
-            } catch (e) {
-              console.error('Failed to trigger booking emails:', e);
-            }
+          } catch (e) {
+            console.error('Failed to trigger booking emails:', e);
           }
         }
 

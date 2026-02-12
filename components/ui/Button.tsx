@@ -36,10 +36,14 @@ export const Button: React.FC<ButtonProps & HTMLMotionProps<"button">> = ({
 
   // Use regular button on mobile to avoid Framer Motion touch issues
   if (isMobile) {
+    const { onClick, disabled, type, ...restProps } = props;
     return (
       <button
+        type={type || 'button'}
+        disabled={disabled}
         className={`${baseStyles} ${variants[variant]} ${sizes[size]} ${className}`}
-        {...props}
+        onClick={disabled ? undefined : onClick}
+        {...restProps}
       >
         <span className="relative z-10">{children}</span>
         {variant === 'primary' && (

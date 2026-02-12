@@ -10,7 +10,7 @@ export const Services: React.FC<{ onOpenBooking: (type?: 'diagnostic' | 'partner
          <div 
            className="bg-red-600 text-white px-6 py-2 rounded-full font-bold text-sm flex items-center gap-2"
            style={{
-             boxShadow: '0 10px 25px rgba(220, 38, 38, 0.4)'
+             boxShadow: '0 10px 25px rgba(220, 38, 38, 0.4)' // Static shadow - CSS will enforce no animation
            }}
          >
             <Clock className="w-4 h-4" />

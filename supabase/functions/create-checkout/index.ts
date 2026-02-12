@@ -37,32 +37,26 @@ serve(async (req) => {
   }
 
   try {
-    const { service_type, user_id, appointment_id, success_url, cancel_url, customer_email } = await req.json();
+    const { 
+      service_type, 
+      user_id, 
+      date, 
+      time, 
+      first_name, 
+      last_name, 
+      email, 
+      phone, 
+      company_name, 
+      company_website, 
+      no_company,
+      success_url, 
+      cancel_url, 
+      customer_email 
+    } = await req.json();
 
-    if (!service_type || !user_id || !appointment_id || !success_url || !cancel_url) {
+    if (!service_type || !user_id || !date || !time || !success_url || !cancel_url) {
       return new Response(
         JSON.stringify({ error: 'Missing required fields' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Validate appointment exists and belongs to this user (security: no JWT required)
-    const { data: appointment, error: appointmentError } = await supabase
-      .from('appointments')
-      .select('id, user_id, status')
-      .eq('id', appointment_id)
-      .single();
-
-    if (appointmentError || !appointment || appointment.user_id !== user_id) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid or unauthorized appointment' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    if (appointment.status !== 'pending') {
-      return new Response(
-        JSON.stringify({ error: 'Appointment already processed' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -76,6 +70,7 @@ serve(async (req) => {
       );
     }
 
+    // Store booking details in Stripe metadata (will be used to create appointment after payment)
     const sessionConfig: Stripe.Checkout.SessionCreateParams = {
       payment_method_types: ['card'],
       mode: service.mode,
@@ -84,8 +79,16 @@ serve(async (req) => {
       customer_email,
       metadata: {
         user_id,
-        appointment_id,
         service_type,
+        date,
+        time,
+        first_name: first_name || '',
+        last_name: last_name || '',
+        email: email || customer_email || '',
+        phone: phone || '',
+        company_name: company_name || '',
+        company_website: company_website || '',
+        no_company: String(no_company || false),
       },
       line_items: [{
         price_data: {

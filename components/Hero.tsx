@@ -155,7 +155,7 @@ export const Hero: React.FC<HeroProps> = ({ onOpenBooking }) => {
               backgroundColor: isMobile ? 'rgba(0, 0, 0, 0.85)' : 'rgba(0, 0, 0, 0.4)', // More opaque black on mobile
               backdropFilter: 'blur(12px)',
               WebkitBackdropFilter: 'blur(12px)',
-              boxShadow: '0 0 30px rgba(245, 158, 11, 0.5)' // Static shadow - no animation
+              boxShadow: '0 0 30px rgba(245, 158, 11, 0.5)' // Static shadow - CSS will enforce no animation
             }}
           >
             <Trophy 

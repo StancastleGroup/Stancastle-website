@@ -168,11 +168,11 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
 
-    // Query all booked appointments in the date range
+    // Query all booked appointments in the date range (only 'paid' and 'booked' - no 'pending' since we don't create pending appointments)
     const { data: appointments, error: queryError } = await supabase
       .from('appointments')
       .select('date, time, status')
-      .in('status', ['pending', 'paid', 'booked'])
+      .in('status', ['paid', 'booked'])
       .gte('date', fromStr)
       .lte('date', toStr);
 
