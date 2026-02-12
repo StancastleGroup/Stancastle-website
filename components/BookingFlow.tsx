@@ -132,6 +132,7 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
     }
   }, [isOpen]);
 
+
   // Pre-fill from profile when signed in
   useEffect(() => {
     if (!profile) return;
@@ -225,7 +226,7 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
       return;
     }
     if (!session) {
-      setShowAuthPrompt(true);
+      alert('Please sign in first to schedule a call. Click "Sign In" in the navigation menu to continue.');
       return;
     }
 
@@ -543,8 +544,17 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
                   )}
                   <div className="pt-4 border-t border-white/10">
                     <p className="text-brand-muted-light text-xs mb-3">Your booking: {formatDateLabel(selectedDate)} at {selectedTime} · {SERVICES[selectedService].title}</p>
-                    <Button className="w-full !py-6 text-xl" onClick={handlePayment} disabled={isProcessing || !canProceedToPayment}>
-                      {isProcessing ? 'Processing...' : `Pay ${SERVICES[selectedService].price} & confirm`}
+                    <Button 
+                      className="w-full !py-6 text-xl" 
+                      onClick={handlePayment}
+                      disabled={isProcessing || !canProceedToPayment || !selectedTime}
+                    >
+                      {isProcessing 
+                        ? 'Processing...' 
+                        : !session 
+                          ? `Sign in to pay ${SERVICES[selectedService].price}`
+                          : `Pay ${SERVICES[selectedService].price} & confirm`
+                      }
                     </Button>
                   </div>
                 </motion.div>
