@@ -7,7 +7,12 @@ export const Services: React.FC<{ onOpenBooking: (type?: 'diagnostic' | 'partner
   return (
     <Section id="services" className="relative">
       <div className="absolute top-0 left-0 right-0 flex justify-center -translate-y-1/2 z-20">
-         <div className="bg-red-600 text-white px-6 py-2 rounded-full font-bold text-sm flex items-center gap-2 animate-bounce shadow-xl">
+         <div 
+           className="bg-red-600 text-white px-6 py-2 rounded-full font-bold text-sm flex items-center gap-2"
+           style={{
+             boxShadow: '0 10px 25px rgba(220, 38, 38, 0.4)'
+           }}
+         >
             <Clock className="w-4 h-4" />
             40% SALE ENDING SOON
          </div>

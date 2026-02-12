@@ -139,15 +139,39 @@ export const Hero: React.FC<HeroProps> = ({ onOpenBooking }) => {
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1, ease: "easeOut" }}
-          className="mb-8 relative group"
+          className="mb-6 md:mb-8 relative px-4"
         >
-          <div className="absolute -inset-2 bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-600 rounded-full blur-lg opacity-25 group-hover:opacity-60 animate-pulse duration-[3000ms]"></div>
-          <div className="relative inline-flex items-center gap-3 px-8 py-3 rounded-full border border-amber-500/40 bg-black/40 backdrop-blur-3xl shadow-[0_0_50px_rgba(245,158,11,0.25)]">
-            <Trophy className="w-4 h-4 text-amber-500" />
-            <span className="text-[10px] md:text-xs text-amber-500 font-black uppercase tracking-[0.35em] whitespace-nowrap">
+          <div 
+            className="absolute -inset-2 rounded-full blur-lg"
+            style={{
+              background: 'linear-gradient(to right, rgb(245 158 11), rgb(250 204 21), rgb(217 119 6))',
+              opacity: isMobile ? 0.4 : 0.25
+            }}
+          ></div>
+          <div 
+            className="relative inline-flex items-center gap-2 md:gap-3 px-4 md:px-8 py-2 md:py-3 rounded-full border-2 md:border max-w-full"
+            style={{
+              borderColor: 'rgb(245 158 11)', // amber-500 solid
+              backgroundColor: isMobile ? 'rgba(0, 0, 0, 0.85)' : 'rgba(0, 0, 0, 0.4)', // More opaque black on mobile
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+              boxShadow: '0 0 30px rgba(245, 158, 11, 0.5)' // Static shadow - no animation
+            }}
+          >
+            <Trophy 
+              className="w-3 h-3 md:w-4 md:h-4 shrink-0" 
+              style={{ color: 'rgb(252 211 77)' }} // amber-300 bright
+            />
+            <span 
+              className="text-[9px] md:text-xs font-black uppercase tracking-[0.2em] md:tracking-[0.35em] text-center leading-tight"
+              style={{ color: 'rgb(252 211 77)' }} // amber-300 bright on mobile
+            >
               Awarded best business plan of the year
             </span>
-            <Sparkles className="w-3 h-3 text-amber-200/40" />
+            <Sparkles 
+              className="w-2.5 h-2.5 md:w-3 md:h-3 shrink-0" 
+              style={{ color: 'rgba(252, 211, 77, 0.9)' }} // amber-300 bright
+            />
           </div>
         </motion.div>
 
@@ -197,21 +221,24 @@ export const Hero: React.FC<HeroProps> = ({ onOpenBooking }) => {
           </motion.p>
           
           {/* Refined & Smaller CTA Button */}
-          <motion.div variants={item} className="flex justify-center pb-12">
+          <motion.div variants={item} className="flex justify-center pb-12 px-4">
             <button 
               onClick={onOpenBooking}
-              className="group relative px-10 py-5 md:px-14 md:py-7 rounded-[1.75rem] overflow-hidden transition-all duration-500 hover:scale-[1.03] active:scale-95 shadow-[0_20px_50px_rgba(217,70,239,0.15)] hover:shadow-[0_0_80px_rgba(217,70,239,0.5)] border border-white/5"
+              className="group relative w-full max-w-sm md:max-w-md lg:max-w-lg px-6 md:px-10 py-4 md:py-5 lg:px-14 lg:py-7 rounded-[1.5rem] md:rounded-[1.75rem] overflow-hidden transition-all duration-500 hover:scale-[1.03] active:scale-95 border-2 border-white/30 md:border-white/5 touch-manipulation"
+              style={{ 
+                backgroundColor: '#d946ef',
+                boxShadow: '0 20px 50px rgba(217, 70, 239, 0.5), 0 0 30px rgba(217, 70, 239, 0.3)'
+              }}
             >
-              <div className="absolute inset-0 bg-brand-accent" />
-              <div className="absolute inset-0 bg-gradient-to-r from-fuchsia-600 via-brand-glow to-purple-600 animate-gradient" style={{ backgroundSize: '300% 100%' }} />
+              <div className="absolute inset-0 bg-gradient-to-r from-fuchsia-600 via-purple-600 to-purple-700 opacity-100" style={{ backgroundSize: '300% 100%' }} />
               <div className="absolute top-0 -left-[100%] w-[150%] h-full bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-[35deg] transition-all duration-1000 group-hover:left-[100%]" />
               
-              <div className="relative z-10 flex items-center gap-6">
-                <span className="text-xl md:text-3xl font-black text-white uppercase tracking-[0.25em] drop-shadow-xl">
+              <div className="relative z-10 flex items-center justify-center gap-3 md:gap-6 flex-wrap md:flex-nowrap">
+                <span className="text-base md:text-xl lg:text-3xl font-black text-white uppercase tracking-[0.15em] md:tracking-[0.25em] drop-shadow-2xl text-center">
                   Take a step today!
                 </span>
-                <div className="flex items-center justify-center w-10 h-10 md:w-12 md:h-12 bg-white/20 rounded-xl backdrop-blur-md border border-white/30 group-hover:bg-white/40 group-hover:translate-x-3 transition-all duration-500">
-                  <ChevronRight className="w-6 h-6 md:w-8 md:h-8 text-white stroke-[4px]" />
+                <div className="flex items-center justify-center w-8 h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 bg-white/40 md:bg-white/20 rounded-xl backdrop-blur-sm md:backdrop-blur-md border-2 border-white/60 md:border-white/30 group-hover:bg-white/40 group-hover:translate-x-3 transition-all duration-500 shrink-0">
+                  <ChevronRight className="w-5 h-5 md:w-6 md:h-6 lg:w-8 lg:h-8 text-white stroke-[3px] md:stroke-[4px]" />
                 </div>
               </div>
             </button>

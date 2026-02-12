@@ -40,10 +40,41 @@ body {
     -webkit-backdrop-filter: blur(8px) !important;
   }
   
+  /* Ensure colors are vibrant on mobile - prevent color fading */
+  button[style*="background-color"] {
+    background-color: #d946ef !important;
+  }
+  
+  /* Ensure amber colors are bright and visible on mobile */
+  .text-amber-300,
+  .text-amber-400,
+  .text-amber-500 {
+    color: rgb(252 211 77) !important; /* amber-300 for better visibility */
+  }
+  
+  /* Force amber colors in award badge on mobile */
+  @media (max-width: 768px) {
+    [style*="color: rgb(252 211 77)"] {
+      color: rgb(252 211 77) !important;
+    }
+    
+    /* Ensure border colors are visible */
+    [style*="borderColor"] {
+      border-color: rgb(245 158 11) !important; /* amber-500 */
+    }
+  }
+  
   /* Reduce shadow complexity */
   .shadow-2xl,
   .shadow-3xl {
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3) !important;
+  }
+  
+  /* Ensure button shadow is vibrant fuchsia on mobile */
+  @media (max-width: 768px) {
+    button[style*="backgroundColor: #d946ef"] {
+      box-shadow: 0 20px 50px rgba(217, 70, 239, 0.5), 0 0 30px rgba(217, 70, 239, 0.3) !important;
+    }
   }
   
   /* Ensure buttons are clickable on mobile */
