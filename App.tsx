@@ -34,18 +34,20 @@ function App() {
     }
   }, []);
 
-  // Optimized scroll progress bar - only update on mobile when needed
+  // Optimized scroll progress bar - only on desktop (mobile: off for performance)
   const [showProgressBar, setShowProgressBar] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   
   useEffect(() => {
-    // Only show progress bar after initial load and on desktop
-    const timer = setTimeout(() => setShowProgressBar(true), 1000);
-    const isMobile = window.innerWidth < 768;
-    if (isMobile) {
-      // Disable progress bar on mobile for better performance
-      setShowProgressBar(false);
-    }
-    return () => clearTimeout(timer);
+    const mq = window.matchMedia('(max-width: 767px)');
+    setIsMobile(mq.matches);
+    const handler = () => setIsMobile(mq.matches);
+    mq.addEventListener('change', handler);
+    const timer = setTimeout(() => setShowProgressBar(!mq.matches), 1000);
+    return () => {
+      mq.removeEventListener('change', handler);
+      clearTimeout(timer);
+    };
   }, []);
 
   const handleOpenBooking = (type?: 'diagnostic' | 'partner') => {
@@ -153,23 +155,34 @@ function App() {
           <Footer />
         </Suspense>
         
-        {/* Sticky Sale Indicator - optimized for mobile */}
-        <motion.div 
-          initial={{ y: 100, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 2, duration: 0.3, ease: 'easeOut' }}
-          className="fixed bottom-4 md:bottom-8 left-1/2 -translate-x-1/2 z-[60] pointer-events-none px-4"
-        >
-          <div className="glass-panel px-6 md:px-10 py-3 md:py-4 rounded-full flex items-center gap-3 md:gap-5 shadow-3xl border border-brand-accent/30 backdrop-blur-xl md:backdrop-blur-3xl">
-            <div className="relative">
-              <span className="flex h-2 w-2 md:h-3 md:w-3 rounded-full bg-brand-accent" />
-              <span className="absolute inset-0 flex h-2 w-2 md:h-3 md:w-3 rounded-full bg-brand-accent animate-ping" />
+        {/* Sticky Sale Indicator - static on mobile for performance */}
+        {isMobile ? (
+          <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[60] pointer-events-none px-4">
+            <div className="glass-panel px-6 py-3 rounded-full flex items-center gap-3 shadow-3xl border border-brand-accent/30">
+              <span className="h-2 w-2 rounded-full bg-brand-accent shrink-0" />
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white whitespace-nowrap">
+                Diagnostic Intake: <span className="text-brand-accent">2 Slots Left</span>
+              </span>
             </div>
-            <span className="text-[10px] md:text-[12px] font-black uppercase tracking-[0.2em] md:tracking-[0.3em] text-white whitespace-nowrap">
-              Diagnostic Intake: <span className="text-brand-accent">2 Slots Left</span>
-            </span>
           </div>
-        </motion.div>
+        ) : (
+          <motion.div 
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 2, duration: 0.3, ease: 'easeOut' }}
+            className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[60] pointer-events-none px-4"
+          >
+            <div className="glass-panel px-10 py-4 rounded-full flex items-center gap-5 shadow-3xl border border-brand-accent/30 backdrop-blur-3xl">
+              <div className="relative">
+                <span className="flex h-3 w-3 rounded-full bg-brand-accent" />
+                <span className="absolute inset-0 flex h-3 w-3 rounded-full bg-brand-accent animate-ping" />
+              </div>
+              <span className="text-[12px] font-black uppercase tracking-[0.3em] text-white whitespace-nowrap">
+                Diagnostic Intake: <span className="text-brand-accent">2 Slots Left</span>
+              </span>
+            </div>
+          </motion.div>
+        )}
       </main>
     </AuthProvider>
   );

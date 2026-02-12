@@ -66,6 +66,14 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
   const [availabilityLoading, setAvailabilityLoading] = useState(false);
   const fetchingRef = useRef<string>(''); // Track which month is currently being fetched
   const redirectUrlRef = useRef<string | null>(null); // Store redirect URL for mobile compatibility
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)');
+    setIsMobile(mq.matches);
+    const h = () => setIsMobile(mq.matches);
+    mq.addEventListener('change', h);
+    return () => mq.removeEventListener('change', h);
+  }, []);
   // Calendar UI: which month is shown in the month picker (for prev/next)
   const [calendarViewMonth, setCalendarViewMonth] = useState<Date>(() => {
     const d = new Date();
@@ -451,6 +459,17 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
 
   if (!isOpen) return null;
 
+  const ModalPanel = isMobile ? 'div' : motion.div;
+  const modalPanelProps = isMobile
+    ? { className: 'relative w-full max-w-4xl bg-[#0f0f13] rounded-[32px] border border-white/10 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]' }
+    : {
+        initial: { opacity: 0, scale: 0.98 },
+        animate: { opacity: 1, scale: 1 },
+        exit: { opacity: 0, scale: 0.98 },
+        transition: { duration: 0.2, ease: 'easeOut' },
+        className: 'relative w-full max-w-4xl bg-[#0f0f13] rounded-[32px] border border-white/10 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]',
+      };
+
   return (
     <>
       <AuthModal 
@@ -460,22 +479,20 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
       />
       
       <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6 overflow-hidden">
-        <motion.div 
-          initial={{ opacity: 0 }} 
-          animate={{ opacity: 1 }} 
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }} 
-          onClick={onClose}
-          className="absolute inset-0 bg-black/90 backdrop-blur-xl"
-        />
+        {isMobile ? (
+          <div onClick={onClose} className="absolute inset-0 bg-black/90" aria-hidden />
+        ) : (
+          <motion.div 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }} 
+            onClick={onClose}
+            className="absolute inset-0 bg-black/90 backdrop-blur-xl"
+          />
+        )}
         
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.98 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.98 }}
-          transition={{ duration: 0.2, ease: 'easeOut' }}
-          className="relative w-full max-w-4xl bg-[#0f0f13] rounded-[32px] border border-white/10 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
-        >
+        <ModalPanel {...modalPanelProps}>
           <div className="p-6 md:p-8 border-b border-white/5 flex items-center justify-between shrink-0">
             <div>
               <h2 className="text-2xl font-serif font-bold text-white">
@@ -826,7 +843,7 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
               )}
             </AnimatePresence>
           </div>
-        </motion.div>
+        </ModalPanel>
       </div>
     </>
   );

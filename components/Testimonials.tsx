@@ -134,24 +134,16 @@ const MarqueeRow: React.FC<{
   const xFrom = direction === 'left' ? '0%' : '-33.333%';
   const xTo = direction === 'left' ? '-33.333%' : '0%';
   
-  // Reduce animation complexity on mobile
-  const animationDuration = isMobile ? duration * 1.5 : duration;
+  // On mobile: much slower animation to reduce CPU and keep smooth
+  const animationDuration = isMobile ? duration * 2.5 : duration;
   
   return (
     <div className="flex overflow-hidden py-4 w-full" aria-hidden="true">
       <motion.div 
         className="flex gap-6 md:gap-10 shrink-0"
         animate={{ x: [xFrom, xTo] }} 
-        transition={{ 
-          duration: animationDuration, 
-          repeat: Infinity, 
-          ease: 'linear'
-        }}
-        style={{ 
-          willChange: 'transform',
-          // Use CSS transform for better performance
-          transform: 'translateZ(0)'
-        }}
+        transition={{ duration: animationDuration, repeat: Infinity, ease: 'linear' }}
+        style={{ willChange: 'transform', transform: 'translateZ(0)' }}
       >
         {[...items, ...items, ...items].map((t, i) => (
           <TestimonialCard key={`${t.name}-${i}`} t={t} />
@@ -168,20 +160,15 @@ export const Testimonials: React.FC = () => {
 
   return (
     <section id="results" className="bg-[#050508] py-20 md:py-32 relative overflow-hidden">
-      {/* Background */}
+      {/* Background - no pulse on mobile for performance */}
       <div className="absolute top-0 left-0 w-full h-full pointer-events-none" aria-hidden="true">
-        <div className="absolute top-[10%] left-[15%] w-[40vw] h-[40vw] bg-fuchsia-600/5 rounded-full blur-[120px] animate-pulse" />
-        <div className="absolute bottom-[10%] right-[15%] w-[40vw] h-[40vw] bg-purple-600/5 rounded-full blur-[120px] animate-pulse" style={{ animationDelay: '2s' }} />
+        <div className="absolute top-[10%] left-[15%] w-[40vw] h-[40vw] bg-fuchsia-600/5 rounded-full blur-[120px] md:animate-pulse" />
+        <div className="absolute bottom-[10%] right-[15%] w-[40vw] h-[40vw] bg-purple-600/5 rounded-full blur-[120px] md:animate-pulse" style={{ animationDelay: '2s' }} />
       </div>
 
-      {/* Header - contained */}
+      {/* Header - contained; no motion on mobile for performance */}
       <div className="container mx-auto px-4 md:px-6 mb-12 md:mb-16 text-center relative z-20">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: '-50px' }}
-          transition={{ duration: 0.5 }}
-        >
+        <div className="opacity-100">
           <span className="text-brand-accent font-bold tracking-[0.3em] uppercase text-xs mb-3 md:mb-4 block">Proof of Work</span>
           <h2 className="font-serif text-4xl md:text-6xl lg:text-7xl font-bold text-white mb-6 md:mb-8 tracking-tight">
             Our results are <br className="hidden md:block" />
@@ -191,7 +178,7 @@ export const Testimonials: React.FC = () => {
             While others talk about growth frameworks, we deliver clinical structural impact. 
             Hear from founders who chose <span className="text-white font-semibold italic">clarity</span> over theater.
           </p>
-        </motion.div>
+        </div>
       </div>
 
       {/* Marquee - full width, edge fades */}
@@ -205,15 +192,9 @@ export const Testimonials: React.FC = () => {
         </div>
       </div>
 
-      {/* CTA - contained, centered */}
+      {/* CTA - contained, centered; no motion on mobile */}
       <div className="container mx-auto px-4 md:px-6 mt-16 md:mt-24 relative z-20 flex justify-center">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.98 }}
-          whileInView={{ opacity: 1, scale: 1 }}
-          viewport={{ once: true }}
-          transition={{ delay: 0.15 }}
-          className="flex justify-center"
-        >
+        <div className="flex justify-center">
           <Button 
             size="lg" 
             className="!px-12 md:!px-16 !py-6 md:!py-8 text-xl md:text-2xl font-bold bg-gradient-to-r from-fuchsia-600 to-purple-600 shadow-[0_0_50px_rgba(217,70,239,0.3)] hover:shadow-[0_0_70px_rgba(217,70,239,0.5)] transition-all duration-500"
@@ -221,7 +202,7 @@ export const Testimonials: React.FC = () => {
           >
             Book Your Session
           </Button>
-        </motion.div>
+        </div>
       </div>
     </section>
   );

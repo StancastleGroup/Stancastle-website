@@ -15,29 +15,41 @@ body {
 /* Mobile performance: reduce animations and improve scrolling */
 @media (max-width: 768px) {
   * {
-    /* Reduce animations on mobile */
-    animation-duration: 0.2s !important;
-    transition-duration: 0.2s !important;
+    /* Minimize animations on mobile for smoothness */
+    animation-duration: 0.15s !important;
+    transition-duration: 0.15s !important;
   }
   
-  /* Optimize scrolling */
+  /* Disable continuous animations on mobile - they cause lag */
+  .animate-ping,
+  .animate-pulse {
+    animation: none !important;
+  }
+  
+  /* Optimize scrolling - avoid will-change on scroll (can cause jank) */
   .overflow-y-auto {
     -webkit-overflow-scrolling: touch;
-    will-change: scroll-position;
+    contain: layout style;
   }
   
   /* Reduce backdrop blur on mobile for better performance */
   .backdrop-blur-xl,
   .backdrop-blur-2xl,
   .backdrop-blur-3xl {
-    backdrop-filter: blur(8px) !important;
-    -webkit-backdrop-filter: blur(8px) !important;
+    backdrop-filter: blur(6px) !important;
+    -webkit-backdrop-filter: blur(6px) !important;
   }
   
   /* Disable expensive effects on mobile */
   .glass-panel {
-    backdrop-filter: blur(8px) !important;
-    -webkit-backdrop-filter: blur(8px) !important;
+    backdrop-filter: blur(6px) !important;
+    -webkit-backdrop-filter: blur(6px) !important;
+  }
+  
+  /* Help browser skip off-screen content during scroll */
+  section:not(:first-of-type) {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 400px;
   }
   
   /* Ensure colors are vibrant on mobile - prevent color fading */
@@ -137,6 +149,18 @@ body {
   0% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
   100% { background-position: 0% 50%; }
+}
+
+/* Mobile: lightweight marquee (no Framer Motion) */
+@keyframes marquee-mobile {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+@media (max-width: 768px) {
+  .marquee-mobile {
+    animation: marquee-mobile 35s linear infinite;
+  }
 }
 
 .animate-gradient {

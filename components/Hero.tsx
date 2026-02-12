@@ -23,47 +23,46 @@ const Logo: React.FC<{ company: typeof companies[0] }> = ({ company }) => (
   </div>
 );
 
-const CrossingX: React.FC<{ delay: number }> = ({ delay }) => (
-  <svg 
-    className="absolute inset-0 w-full h-full pointer-events-none z-10 overflow-visible" 
-    viewBox="0 0 100 100" 
-    preserveAspectRatio="none"
-  >
-    <motion.line 
-      x1="0" y1="20" x2="100" y2="80" 
-      stroke="#ef4444" 
-      strokeWidth="3" 
-      strokeLinecap="round"
-      initial={{ pathLength: 0, opacity: 0 }}
-      animate={{ pathLength: 1, opacity: 0.8 }}
-      transition={{ duration: 0.5, delay: delay, ease: "easeOut" }}
-    />
-    <motion.line 
-      x1="100" y1="20" x2="0" y2="80" 
-      stroke="#ef4444" 
-      strokeWidth="3" 
-      strokeLinecap="round"
-      initial={{ pathLength: 0, opacity: 0 }}
-      animate={{ pathLength: 1, opacity: 0.8 }}
-      transition={{ duration: 0.5, delay: delay + 0.2, ease: "easeOut" }}
-    />
-  </svg>
-);
+const CrossingX: React.FC<{ delay: number; isMobile?: boolean }> = ({ delay, isMobile }) => {
+  if (isMobile) {
+    return (
+      <svg className="absolute inset-0 w-full h-full pointer-events-none z-10 overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none">
+        <line x1="0" y1="20" x2="100" y2="80" stroke="#ef4444" strokeWidth="3" strokeLinecap="round" opacity={0.8} />
+        <line x1="100" y1="20" x2="0" y2="80" stroke="#ef4444" strokeWidth="3" strokeLinecap="round" opacity={0.8} />
+      </svg>
+    );
+  }
+  return (
+    <svg className="absolute inset-0 w-full h-full pointer-events-none z-10 overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none">
+      <motion.line x1="0" y1="20" x2="100" y2="80" stroke="#ef4444" strokeWidth="3" strokeLinecap="round" initial={{ pathLength: 0, opacity: 0 }} animate={{ pathLength: 1, opacity: 0.8 }} transition={{ duration: 0.5, delay, ease: 'easeOut' }} />
+      <motion.line x1="100" y1="20" x2="0" y2="80" stroke="#ef4444" strokeWidth="3" strokeLinecap="round" initial={{ pathLength: 0, opacity: 0 }} animate={{ pathLength: 1, opacity: 0.8 }} transition={{ duration: 0.5, delay: delay + 0.2, ease: 'easeOut' }} />
+    </svg>
+  );
+};
 
-const ShiningDot: React.FC<{ index: number }> = ({ index }) => {
-  const [isMobile, setIsMobile] = React.useState(false);
-  
-  React.useEffect(() => {
-    setIsMobile(window.innerWidth < 768);
-  }, []);
-  
-  // Reduce dots on mobile for performance
-  if (isMobile && index > 20) return null;
+const ShiningDot: React.FC<{ index: number; isMobile: boolean }> = ({ index, isMobile }) => {
+  // Fewer dots on mobile, no animation
+  if (isMobile && index >= 8) return null;
   
   const size = useMemo(() => Math.random() * 2 + 1, []);
   const initialX = useMemo(() => Math.random() * 100, []);
   const initialY = useMemo(() => Math.random() * 100, []);
   const duration = useMemo(() => Math.random() * 15 + 15, []);
+
+  if (isMobile) {
+    return (
+      <div
+        className="absolute rounded-full bg-white"
+        style={{
+          width: size,
+          height: size,
+          left: `${initialX}%`,
+          top: `${initialY}%`,
+          opacity: 0.12,
+        }}
+      />
+    );
+  }
 
   return (
     <motion.div
@@ -77,14 +76,14 @@ const ShiningDot: React.FC<{ index: number }> = ({ index }) => {
         opacity: 0.1,
         willChange: 'opacity, transform',
       }}
-      animate={isMobile ? {} : {
+      animate={{
         opacity: [0.1, 0.4, 0.1],
         scale: [1, 1.5, 1],
       }}
-      transition={isMobile ? {} : {
-        duration: duration,
+      transition={{
+        duration,
         repeat: Infinity,
-        ease: "easeInOut",
+        ease: 'easeInOut',
       }}
     />
   );
@@ -121,15 +120,15 @@ export const Hero: React.FC<HeroProps> = ({ onOpenBooking }) => {
     }
   };
 
-  const dots = useMemo(() => Array.from({ length: isMobile ? 15 : 40 }), [isMobile]);
+  const dots = useMemo(() => Array.from({ length: isMobile ? 8 : 40 }), [isMobile]);
 
   return (
     <section className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden bg-brand-dark pt-32 pb-16">
-      {/* Cinematic Ambience */}
+      {/* Cinematic Ambience - reduced blur on mobile */}
       <div className="absolute inset-0 z-0 pointer-events-none">
         <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_40%,rgba(217,70,239,0.06)_0%,rgba(5,5,8,0)_70%)]" />
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[75vw] h-[75vw] bg-brand-glow/5 rounded-full blur-[140px]" />
-        {dots.map((_, i) => <ShiningDot key={i} index={i} />)}
+        <div className={`absolute top-1/4 left-1/2 -translate-x-1/2 w-[75vw] h-[75vw] bg-brand-glow/5 rounded-full ${isMobile ? 'blur-[60px]' : 'blur-[140px]'}`} />
+        {dots.map((_, i) => <ShiningDot key={i} index={i} isMobile={isMobile} />)}
       </div>
 
       <div className="container mx-auto px-6 relative z-10 flex flex-col items-center text-center max-w-[1400px]">
@@ -191,17 +190,17 @@ export const Hero: React.FC<HeroProps> = ({ onOpenBooking }) => {
                 <span className="text-lg md:text-2xl font-mono text-brand-muted tracking-[0.15em] uppercase italic">
                   {text}
                 </span>
-                <CrossingX delay={1.4 + (idx * 0.3)} />
+                <CrossingX delay={1.4 + (idx * 0.3)} isMobile={isMobile} />
               </div>
             ))}
           </motion.div>
 
-          {/* Intake Bridge Badge */}
+          {/* Intake Bridge Badge - no ping on mobile */}
           <motion.div variants={item} className="mb-8">
             <div className="inline-flex items-center gap-3 px-5 py-2 rounded-full border border-brand-accent/40 bg-brand-accent/10 backdrop-blur-2xl">
               <div className="relative">
                 <div className="w-2.5 h-2.5 bg-brand-accent rounded-full" />
-                <div className="absolute inset-0 w-2.5 h-2.5 bg-brand-accent rounded-full animate-ping" />
+                {!isMobile && <div className="absolute inset-0 w-2.5 h-2.5 bg-brand-accent rounded-full animate-ping" />}
               </div>
               <span className="text-[10px] font-black uppercase tracking-[0.25em] text-white">
                 Diagnostic Intake: <span className="text-brand-accent">2 Slots Left</span>
@@ -254,15 +253,23 @@ export const Hero: React.FC<HeroProps> = ({ onOpenBooking }) => {
                <div className="absolute inset-y-0 left-0 w-32 md:w-64 bg-gradient-to-r from-brand-dark via-brand-dark/95 to-transparent z-10" />
                <div className="absolute inset-y-0 right-0 w-32 md:w-64 bg-gradient-to-l from-brand-dark via-brand-dark/95 to-transparent z-10" />
                
-               <motion.div 
-                className="flex items-center gap-24 md:gap-44 whitespace-nowrap"
-                animate={{ x: ["0%", "-50%"] }}
-                transition={{ duration: 40, repeat: Infinity, ease: "linear" }}
-               >
-                 {[...companies, ...companies].map((c, i) => (
-                   <Logo key={`${c.name}-${i}`} company={c} />
-                 ))}
-               </motion.div>
+               {isMobile ? (
+                 <div className="flex items-center gap-12 whitespace-nowrap marquee-mobile">
+                   {[...companies, ...companies].map((c, i) => (
+                     <Logo key={`${c.name}-${i}`} company={c} />
+                   ))}
+                 </div>
+               ) : (
+                 <motion.div 
+                   className="flex items-center gap-24 md:gap-44 whitespace-nowrap"
+                   animate={{ x: ['0%', '-50%'] }}
+                   transition={{ duration: 40, repeat: Infinity, ease: 'linear' }}
+                 >
+                   {[...companies, ...companies].map((c, i) => (
+                     <Logo key={`${c.name}-${i}`} company={c} />
+                   ))}
+                 </motion.div>
+               )}
             </div>
             
             <p className="text-[10px] text-brand-muted uppercase tracking-[0.45em] text-center font-black">

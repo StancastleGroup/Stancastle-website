@@ -56,8 +56,25 @@ export const Navigation: React.FC<{ onOpenBooking: () => void }> = ({ onOpenBook
   const [authView, setAuthView] = useState<'signin' | 'signup'>('signin');
 
   useEffect(() => {
-    const handleScroll = () => setIsScrolled(window.scrollY > 30);
-    window.addEventListener('scroll', handleScroll);
+    let ticking = false;
+    let lastScrolled: boolean | null = null;
+    const handleScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        const next = window.scrollY > 30;
+        // On mobile, only update when crossing threshold to reduce re-renders
+        if (window.innerWidth < 768 && lastScrolled !== null && lastScrolled === next) {
+          ticking = false;
+          return;
+        }
+        lastScrolled = next;
+        setIsScrolled(next);
+        ticking = false;
+      });
+    };
+    handleScroll(); // set initial
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
