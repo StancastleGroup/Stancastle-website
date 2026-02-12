@@ -69,11 +69,18 @@ const testimonials = [
   }
 ];
 
-const TestimonialCard: React.FC<{ t: typeof testimonials[0] }> = ({ t }) => (
-  <motion.div 
-    whileHover={{ y: -4, scale: 1.02 }}
-    className="w-[320px] sm:w-[360px] md:w-[380px] shrink-0 bg-[#11111a]/90 backdrop-blur-xl p-6 md:p-8 rounded-2xl md:rounded-[28px] border border-white/10 hover:border-brand-accent/40 transition-all duration-300 group relative overflow-hidden flex flex-col min-h-[260px] md:min-h-[280px]"
-  >
+const TestimonialCard: React.FC<{ t: typeof testimonials[0] }> = ({ t }) => {
+  const [isMobile, setIsMobile] = React.useState(false);
+  
+  React.useEffect(() => {
+    setIsMobile(window.innerWidth < 768);
+  }, []);
+  
+  return (
+    <motion.div 
+      whileHover={isMobile ? {} : { y: -4, scale: 1.02 }}
+      className="w-[320px] sm:w-[360px] md:w-[380px] shrink-0 bg-[#11111a]/90 backdrop-blur-xl p-6 md:p-8 rounded-2xl md:rounded-[28px] border border-white/10 hover:border-brand-accent/40 transition-all duration-300 group relative overflow-hidden flex flex-col min-h-[260px] md:min-h-[280px]"
+    >
     {/* Inner Glow */}
     <div className="absolute inset-0 bg-gradient-to-br from-brand-accent/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
     
@@ -109,16 +116,26 @@ const TestimonialCard: React.FC<{ t: typeof testimonials[0] }> = ({ t }) => (
       </div>
     </div>
   </motion.div>
-);
+  );
+};
 
 const MarqueeRow: React.FC<{ 
   items: typeof testimonials; 
   direction: 'left' | 'right'; 
   duration: number 
 }> = ({ items, direction, duration }) => {
+  const [isMobile, setIsMobile] = React.useState(false);
+  
+  React.useEffect(() => {
+    setIsMobile(window.innerWidth < 768);
+  }, []);
+  
   // One-third of content width = seamless loop (we have 3 identical segments)
   const xFrom = direction === 'left' ? '0%' : '-33.333%';
   const xTo = direction === 'left' ? '-33.333%' : '0%';
+  
+  // Reduce animation complexity on mobile
+  const animationDuration = isMobile ? duration * 1.5 : duration;
   
   return (
     <div className="flex overflow-hidden py-4 w-full" aria-hidden="true">
@@ -126,11 +143,15 @@ const MarqueeRow: React.FC<{
         className="flex gap-6 md:gap-10 shrink-0"
         animate={{ x: [xFrom, xTo] }} 
         transition={{ 
-          duration, 
+          duration: animationDuration, 
           repeat: Infinity, 
           ease: 'linear'
         }}
-        style={{ willChange: 'transform' }}
+        style={{ 
+          willChange: 'transform',
+          // Use CSS transform for better performance
+          transform: 'translateZ(0)'
+        }}
       >
         {[...items, ...items, ...items].map((t, i) => (
           <TestimonialCard key={`${t.name}-${i}`} t={t} />

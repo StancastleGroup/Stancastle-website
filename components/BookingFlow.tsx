@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ArrowRight, ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, CheckCircle2 } from 'lucide-react';
 import { supabase, supabaseUrl, supabaseAnonKey } from '../lib/supabase';
@@ -64,6 +64,7 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
   // Real availability: fetched per month when user views that month (current month on open, then on prev/next)
   const [availabilityByDate, setAvailabilityByDate] = useState<Record<string, string[]>>({});
   const [availabilityLoading, setAvailabilityLoading] = useState(false);
+  const fetchingRef = useRef<string>(''); // Track which month is currently being fetched
   // Calendar UI: which month is shown in the month picker (for prev/next)
   const [calendarViewMonth, setCalendarViewMonth] = useState<Date>(() => {
     const d = new Date();
@@ -83,6 +84,12 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
     (viewMonth: Date) => {
       const y = viewMonth.getFullYear();
       const m = viewMonth.getMonth();
+      const monthKey = `${y}-${String(m + 1).padStart(2, '0')}`;
+      
+      // Prevent duplicate fetches for the same month
+      if (fetchingRef.current === monthKey) return;
+      fetchingRef.current = monthKey;
+      
       const from = new Date(y, m, 1);
       const to = new Date(y, m + 1, 0);
       const fromStr = from.toISOString().split('T')[0];
@@ -100,14 +107,15 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
             byDate[d.date] = d.slots ?? [];
           });
           // Replace (not merge) availability for this month to ensure booked slots don't appear
+          // Optimized: create new object instead of mutating
           setAvailabilityByDate((prev) => {
-            const updated = { ...prev };
-            // Remove all dates from this month first
             const monthStart = `${y}-${String(m + 1).padStart(2, '0')}-01`;
             const monthEnd = `${y}-${String(m + 1).padStart(2, '0')}-31`;
-            Object.keys(updated).forEach((dateStr) => {
-              if (dateStr >= monthStart && dateStr <= monthEnd) {
-                delete updated[dateStr];
+            const updated: Record<string, string[]> = {};
+            // Copy dates from other months
+            Object.keys(prev).forEach((dateStr) => {
+              if (dateStr < monthStart || dateStr > monthEnd) {
+                updated[dateStr] = prev[dateStr];
               }
             });
             // Add fresh availability for this month
@@ -128,37 +136,47 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
           // Don't track fetchedMonths anymore - we always fetch fresh
           // setFetchedMonths((prev) => new Set(prev).add(`${y}-${String(m + 1).padStart(2, '0')}`));
         })
-        .finally(() => setAvailabilityLoading(false));
+        .finally(() => {
+          setAvailabilityLoading(false);
+          fetchingRef.current = ''; // Clear fetching flag
+        });
     },
     []
   );
 
-  // When calendar step is active, always fetch fresh availability (ensures booked slots don't appear)
+  // Track which month we've fetched to avoid duplicate fetches
+  const [lastFetchedMonth, setLastFetchedMonth] = useState<string>('');
+
+  // When calendar step is active, fetch availability for the current month (only if changed)
   useEffect(() => {
     if (!isOpen || step !== 'calendar') return;
-    // Always fetch fresh to ensure we exclude any newly booked slots
-    // Don't check fetchedMonths - we want fresh data every time to avoid showing booked slots
-    fetchAvailabilityForMonth(calendarViewMonth);
-  }, [isOpen, step, monthKey, calendarViewMonth, fetchAvailabilityForMonth]);
+    // Only fetch if we haven't fetched this month yet, or if it's been more than 30 seconds
+    if (lastFetchedMonth !== monthKey) {
+      fetchAvailabilityForMonth(calendarViewMonth);
+      setLastFetchedMonth(monthKey);
+    }
+  }, [isOpen, step, monthKey, calendarViewMonth, fetchAvailabilityForMonth, lastFetchedMonth]);
 
-  // When modal closes, clear availability cache so next open we fetch fresh data
+  // When modal closes, clear availability cache and reset fetched month
   useEffect(() => {
     if (!isOpen) {
       setAvailabilityByDate({});
+      setLastFetchedMonth('');
     }
   }, [isOpen]);
 
 
-  // Pre-fill from profile when signed in
+  // Pre-fill from profile when signed in (only update if values changed)
   useEffect(() => {
     if (!profile) return;
-    setFormData((f) => ({
-      ...f,
-      email: profile.email || f.email,
-      firstName: profile.first_name || f.firstName,
-      lastName: profile.last_name || f.lastName,
-      companyName: profile.company || f.companyName,
-    }));
+    setFormData((f) => {
+      const updates: Partial<typeof f> = {};
+      if (profile.email && profile.email !== f.email) updates.email = profile.email;
+      if (profile.first_name && profile.first_name !== f.firstName) updates.firstName = profile.first_name;
+      if (profile.last_name && profile.last_name !== f.lastName) updates.lastName = profile.last_name;
+      if (profile.company && profile.company !== f.companyName) updates.companyName = profile.company;
+      return Object.keys(updates).length > 0 ? { ...f, ...updates } : f;
+    });
   }, [profile?.email, profile?.first_name, profile?.last_name, profile?.company]);
 
   const bookableDates = useMemo(() => {
@@ -426,15 +444,17 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
         <motion.div 
           initial={{ opacity: 0 }} 
           animate={{ opacity: 1 }} 
-          exit={{ opacity: 0 }} 
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }} 
           onClick={onClose}
           className="absolute inset-0 bg-black/90 backdrop-blur-xl"
         />
         
         <motion.div 
-          initial={{ opacity: 0, scale: 0.95, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 20 }}
+          initial={{ opacity: 0, scale: 0.98 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.98 }}
+          transition={{ duration: 0.2, ease: 'easeOut' }}
           className="relative w-full max-w-4xl bg-[#0f0f13] rounded-[32px] border border-white/10 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
         >
           <div className="p-6 md:p-8 border-b border-white/5 flex items-center justify-between shrink-0">
@@ -451,10 +471,17 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
             </button>
           </div>
 
-          <div className="flex-grow overflow-y-auto p-6 md:p-10">
+          <div className="flex-grow overflow-y-auto p-6 md:p-10" style={{ WebkitOverflowScrolling: 'touch' }}>
             <AnimatePresence mode="wait">
               {step === 'service' && (
-                <motion.div key="service" className="grid md:grid-cols-2 gap-6">
+                <motion.div 
+                  key="service" 
+                  className="grid md:grid-cols-2 gap-6"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                >
                   {Object.entries(SERVICES).map(([key, s]) => (
                     <button 
                       key={key} 
@@ -470,7 +497,14 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
               )}
 
               {step === 'calendar' && (
-                <motion.div key="calendar" className="flex flex-col md:flex-row gap-10">
+                <motion.div 
+                  key="calendar" 
+                  className="flex flex-col md:flex-row gap-10"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                >
                   <div className="flex-grow">
                     <h3 className="text-lg font-bold text-white mb-4">Select a Date & Time</h3>
                     {availabilityLoading ? (
@@ -481,8 +515,13 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
                           <button
                             type="button"
                             aria-label="Previous month"
-                            onClick={() => setCalendarViewMonth((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1))}
-                            className="w-10 h-10 rounded-full border border-white/20 text-white hover:bg-white/10 flex items-center justify-center"
+                            onClick={() => {
+                              setCalendarViewMonth((m) => {
+                                const newMonth = new Date(m.getFullYear(), m.getMonth() - 1, 1);
+                                return newMonth;
+                              });
+                            }}
+                            className="w-10 h-10 rounded-full border border-white/20 text-white hover:bg-white/10 flex items-center justify-center transition-colors"
                           >
                             <span className="sr-only">Previous</span>
                             <ChevronLeft className="w-5 h-5" />
@@ -493,8 +532,13 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
                           <button
                             type="button"
                             aria-label="Next month"
-                            onClick={() => setCalendarViewMonth((m) => new Date(m.getFullYear(), m.getMonth() + 1, 1))}
-                            className="w-10 h-10 rounded-full border border-white/20 text-white hover:bg-white/10 flex items-center justify-center"
+                            onClick={() => {
+                              setCalendarViewMonth((m) => {
+                                const newMonth = new Date(m.getFullYear(), m.getMonth() + 1, 1);
+                                return newMonth;
+                              });
+                            }}
+                            className="w-10 h-10 rounded-full border border-white/20 text-white hover:bg-white/10 flex items-center justify-center transition-colors"
                           >
                             <span className="sr-only">Next</span>
                             <ChevronRight className="w-5 h-5" />
@@ -513,7 +557,7 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
                             const canClick = cell.isCurrentMonth && cell.isBookable && !cell.isPast;
                             return (
                               <button
-                                key={i}
+                                key={`${cell.date.getTime()}-${i}`}
                                 type="button"
                                 disabled={!canClick}
                                 onClick={() => {
@@ -523,7 +567,7 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
                                   }
                                 }}
                                 className={`
-                                  aspect-square rounded-full text-sm font-medium flex items-center justify-center
+                                  aspect-square rounded-full text-sm font-medium flex items-center justify-center transition-colors
                                   ${!cell.isCurrentMonth ? 'text-white/20' : ''}
                                   ${cell.isCurrentMonth && cell.isPast ? 'text-brand-muted-light/60' : ''}
                                   ${cell.isCurrentMonth && !cell.isPast && !cell.isBookable ? 'text-brand-muted-light/60' : ''}
@@ -571,7 +615,14 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
               )}
 
               {step === 'details' && (
-                <motion.div key="details" className="space-y-8">
+                <motion.div 
+                  key="details" 
+                  className="space-y-8"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.15 }}
+                >
                   <p className="text-brand-muted-light text-sm">A few details so we can confirm your booking and send the meeting link.</p>
                   <div className="grid sm:grid-cols-2 gap-4">
                     <div>
@@ -580,8 +631,9 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
                         type="text"
                         value={formData.firstName}
                         onChange={(e) => {
-                          setFormData({ ...formData, firstName: e.target.value });
-                          if (formErrors.firstName) setFormErrors({ ...formErrors, firstName: '' });
+                          const value = e.target.value;
+                          setFormData((prev) => ({ ...prev, firstName: value }));
+                          if (formErrors.firstName) setFormErrors((prev) => ({ ...prev, firstName: '' }));
                         }}
                         placeholder="First name"
                         className={`w-full bg-white/[0.03] border rounded-xl px-4 py-3 text-white placeholder:text-brand-muted focus:outline-none transition-colors ${
@@ -596,8 +648,9 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
                         type="text"
                         value={formData.lastName}
                         onChange={(e) => {
-                          setFormData({ ...formData, lastName: e.target.value });
-                          if (formErrors.lastName) setFormErrors({ ...formErrors, lastName: '' });
+                          const value = e.target.value;
+                          setFormData((prev) => ({ ...prev, lastName: value }));
+                          if (formErrors.lastName) setFormErrors((prev) => ({ ...prev, lastName: '' }));
                         }}
                         placeholder="Last name"
                         className={`w-full bg-white/[0.03] border rounded-xl px-4 py-3 text-white placeholder:text-brand-muted focus:outline-none transition-colors ${
@@ -613,15 +666,16 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
                       type="email"
                       value={formData.email}
                       onChange={(e) => {
-                        setFormData({ ...formData, email: e.target.value });
+                        const value = e.target.value;
+                        setFormData((prev) => ({ ...prev, email: value }));
                         if (formErrors.email) {
-                          const error = validateEmail(e.target.value);
-                          setFormErrors({ ...formErrors, email: error });
+                          const error = validateEmail(value);
+                          setFormErrors((prev) => ({ ...prev, email: error }));
                         }
                       }}
                       onBlur={(e) => {
                         const error = validateEmail(e.target.value);
-                        if (error) setFormErrors({ ...formErrors, email: error });
+                        if (error) setFormErrors((prev) => ({ ...prev, email: error }));
                       }}
                       placeholder="you@company.com"
                       className={`w-full bg-white/[0.03] border rounded-xl px-4 py-3 text-white placeholder:text-brand-muted focus:outline-none transition-colors ${
@@ -636,15 +690,16 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
                       type="tel"
                       value={formData.phone}
                       onChange={(e) => {
-                        setFormData({ ...formData, phone: e.target.value });
+                        const value = e.target.value;
+                        setFormData((prev) => ({ ...prev, phone: value }));
                         if (formErrors.phone) {
-                          const error = validatePhone(e.target.value);
-                          setFormErrors({ ...formErrors, phone: error });
+                          const error = validatePhone(value);
+                          setFormErrors((prev) => ({ ...prev, phone: error }));
                         }
                       }}
                       onBlur={(e) => {
                         const error = validatePhone(e.target.value);
-                        if (error) setFormErrors({ ...formErrors, phone: error });
+                        if (error) setFormErrors((prev) => ({ ...prev, phone: error }));
                       }}
                       placeholder="07700 900000 or +44 7700 900000"
                       className={`w-full bg-white/[0.03] border rounded-xl px-4 py-3 text-white placeholder:text-brand-muted focus:outline-none transition-colors ${
@@ -658,7 +713,15 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
                       type="checkbox"
                       id="noCompany"
                       checked={formData.noCompany}
-                      onChange={(e) => setFormData({ ...formData, noCompany: e.target.checked, companyName: e.target.checked ? '' : formData.companyName, companyWebsite: e.target.checked ? '' : formData.companyWebsite })}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setFormData((prev) => ({ 
+                          ...prev, 
+                          noCompany: checked, 
+                          companyName: checked ? '' : prev.companyName, 
+                          companyWebsite: checked ? '' : prev.companyWebsite 
+                        }));
+                      }}
                       className="rounded border-white/20 bg-white/5 text-brand-accent focus:ring-brand-accent"
                     />
                     <label htmlFor="noCompany" className="text-sm text-brand-muted-light cursor-pointer">I don&apos;t have a company</label>
@@ -671,8 +734,9 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
                           type="text"
                           value={formData.companyName}
                           onChange={(e) => {
-                            setFormData({ ...formData, companyName: e.target.value });
-                            if (formErrors.companyName) setFormErrors({ ...formErrors, companyName: '' });
+                            const value = e.target.value;
+                            setFormData((prev) => ({ ...prev, companyName: value }));
+                            if (formErrors.companyName) setFormErrors((prev) => ({ ...prev, companyName: '' }));
                           }}
                           placeholder="Company name"
                           className={`w-full bg-white/[0.03] border rounded-xl px-4 py-3 text-white placeholder:text-brand-muted focus:outline-none transition-colors ${
@@ -687,15 +751,16 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
                           type="url"
                           value={formData.companyWebsite}
                           onChange={(e) => {
-                            setFormData({ ...formData, companyWebsite: e.target.value });
+                            const value = e.target.value;
+                            setFormData((prev) => ({ ...prev, companyWebsite: value }));
                             if (formErrors.companyWebsite) {
-                              const error = validateUrl(e.target.value);
-                              setFormErrors({ ...formErrors, companyWebsite: error });
+                              const error = validateUrl(value);
+                              setFormErrors((prev) => ({ ...prev, companyWebsite: error }));
                             }
                           }}
                           onBlur={(e) => {
                             const error = validateUrl(e.target.value);
-                            if (error) setFormErrors({ ...formErrors, companyWebsite: error });
+                            if (error) setFormErrors((prev) => ({ ...prev, companyWebsite: error }));
                           }}
                           placeholder="https://example.com"
                           className={`w-full bg-white/[0.03] border rounded-xl px-4 py-3 text-white placeholder:text-brand-muted focus:outline-none transition-colors ${

@@ -1,20 +1,24 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { Navigation } from './components/Navigation';
-import { Hero } from './components/Hero';
-import { ProblemSection } from './components/ProblemSection';
-import { About } from './components/About';
-import { Comparison } from './components/Comparison';
-import { WhyUs } from './components/WhyUs';
-import { Services } from './components/Services';
-import { Testimonials } from './components/Testimonials';
-import { FAQ } from './components/FAQ';
-import { ContactForm } from './components/ContactForm';
-import { Footer } from './components/Footer';
 import { AuthProvider } from './context/AuthContext';
-import { AnimatePresence, motion, useScroll, useSpring } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { CheckCircle2 } from 'lucide-react';
 
+// Lazy load all below-the-fold components for better initial load performance
+const Hero = lazy(() => import('./components/Hero').then((m) => ({ default: m.Hero })));
+const ProblemSection = lazy(() => import('./components/ProblemSection').then((m) => ({ default: m.ProblemSection })));
+const Comparison = lazy(() => import('./components/Comparison').then((m) => ({ default: m.Comparison })));
+const Services = lazy(() => import('./components/Services').then((m) => ({ default: m.Services })));
+const WhyUs = lazy(() => import('./components/WhyUs').then((m) => ({ default: m.WhyUs })));
+const Testimonials = lazy(() => import('./components/Testimonials').then((m) => ({ default: m.Testimonials })));
+const FAQ = lazy(() => import('./components/FAQ').then((m) => ({ default: m.FAQ })));
+const About = lazy(() => import('./components/About').then((m) => ({ default: m.About })));
+const ContactForm = lazy(() => import('./components/ContactForm').then((m) => ({ default: m.ContactForm })));
+const Footer = lazy(() => import('./components/Footer').then((m) => ({ default: m.Footer })));
 const BookingFlow = lazy(() => import('./components/BookingFlow').then((m) => ({ default: m.BookingFlow })));
+
+// Simple loading placeholder
+const SectionLoader = () => <div className="min-h-[400px] bg-brand-dark" />;
 
 function App() {
   const [isBookingOpen, setIsBookingOpen] = useState(false);
@@ -30,12 +34,19 @@ function App() {
     }
   }, []);
 
-  const { scrollYProgress } = useScroll();
-  const scaleX = useSpring(scrollYProgress, {
-    stiffness: 100,
-    damping: 30,
-    restDelta: 0.001
-  });
+  // Optimized scroll progress bar - only update on mobile when needed
+  const [showProgressBar, setShowProgressBar] = useState(false);
+  
+  useEffect(() => {
+    // Only show progress bar after initial load and on desktop
+    const timer = setTimeout(() => setShowProgressBar(true), 1000);
+    const isMobile = window.innerWidth < 768;
+    if (isMobile) {
+      // Disable progress bar on mobile for better performance
+      setShowProgressBar(false);
+    }
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleOpenBooking = (type?: 'diagnostic' | 'partner') => {
     setInitialServiceType(type);
@@ -45,15 +56,14 @@ function App() {
   return (
     <AuthProvider>
       <main className="min-h-screen bg-brand-dark text-brand-text font-sans antialiased selection:bg-brand-accent/40 selection:text-white">
-        {/* Cinematic Progress Bar */}
-        <motion.div
-          className="fixed top-0 left-0 right-0 h-[2px] bg-brand-accent z-[110] origin-left"
-          style={{ scaleX }}
-        />
+        {/* Optimized Progress Bar - only on desktop after load */}
+        {showProgressBar && typeof window !== 'undefined' && window.innerWidth >= 768 && (
+          <ScrollProgressBar />
+        )}
 
         <Navigation onOpenBooking={() => handleOpenBooking()} />
         
-        <AnimatePresence>
+        <AnimatePresence mode="wait">
           {isBookingOpen && (
             <Suspense fallback={null}>
               <BookingFlow 
@@ -102,40 +112,60 @@ function App() {
           )}
         </AnimatePresence>
         
-        <Hero onOpenBooking={() => handleOpenBooking()} />
+        <Suspense fallback={<SectionLoader />}>
+          <Hero onOpenBooking={() => handleOpenBooking()} />
+        </Suspense>
 
         <div className="relative">
-          {/* Centralizing flow line */}
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-full bg-gradient-to-b from-brand-accent/20 via-transparent to-brand-accent/5 pointer-events-none opacity-10" />
+          {/* Centralizing flow line - only on desktop for performance */}
+          <div className="hidden md:block absolute top-0 left-1/2 -translate-x-1/2 w-px h-full bg-gradient-to-b from-brand-accent/20 via-transparent to-brand-accent/5 pointer-events-none opacity-10" />
           
-          <ProblemSection />
+          <Suspense fallback={<SectionLoader />}>
+            <ProblemSection />
+          </Suspense>
           
           <div className="space-y-4 md:space-y-8">
-            <Comparison />
-            <Services onOpenBooking={handleOpenBooking} />
-            <WhyUs />
-            <Testimonials />
-            <FAQ />
-            <About />
-            <ContactForm />
+            <Suspense fallback={<SectionLoader />}>
+              <Comparison />
+            </Suspense>
+            <Suspense fallback={<SectionLoader />}>
+              <Services onOpenBooking={handleOpenBooking} />
+            </Suspense>
+            <Suspense fallback={<SectionLoader />}>
+              <WhyUs />
+            </Suspense>
+            <Suspense fallback={<SectionLoader />}>
+              <Testimonials />
+            </Suspense>
+            <Suspense fallback={<SectionLoader />}>
+              <FAQ />
+            </Suspense>
+            <Suspense fallback={<SectionLoader />}>
+              <About />
+            </Suspense>
+            <Suspense fallback={<SectionLoader />}>
+              <ContactForm />
+            </Suspense>
           </div>
         </div>
         
-        <Footer />
+        <Suspense fallback={null}>
+          <Footer />
+        </Suspense>
         
-        {/* Sticky Sale Indicator */}
+        {/* Sticky Sale Indicator - optimized for mobile */}
         <motion.div 
-          initial={{ y: 100 }}
-          animate={{ y: 0 }}
-          transition={{ delay: 2, type: 'spring' }}
-          className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[60] pointer-events-none"
+          initial={{ y: 100, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 2, duration: 0.3, ease: 'easeOut' }}
+          className="fixed bottom-4 md:bottom-8 left-1/2 -translate-x-1/2 z-[60] pointer-events-none px-4"
         >
-          <div className="glass-panel px-10 py-4 rounded-full flex items-center gap-5 shadow-3xl border border-brand-accent/30 backdrop-blur-3xl">
+          <div className="glass-panel px-6 md:px-10 py-3 md:py-4 rounded-full flex items-center gap-3 md:gap-5 shadow-3xl border border-brand-accent/30 backdrop-blur-xl md:backdrop-blur-3xl">
             <div className="relative">
-              <span className="flex h-3 w-3 rounded-full bg-brand-accent" />
-              <span className="absolute inset-0 flex h-3 w-3 rounded-full bg-brand-accent animate-ping" />
+              <span className="flex h-2 w-2 md:h-3 md:w-3 rounded-full bg-brand-accent" />
+              <span className="absolute inset-0 flex h-2 w-2 md:h-3 md:w-3 rounded-full bg-brand-accent animate-ping" />
             </div>
-            <span className="text-[12px] font-black uppercase tracking-[0.3em] text-white whitespace-nowrap">
+            <span className="text-[10px] md:text-[12px] font-black uppercase tracking-[0.2em] md:tracking-[0.3em] text-white whitespace-nowrap">
               Diagnostic Intake: <span className="text-brand-accent">2 Slots Left</span>
             </span>
           </div>
@@ -144,5 +174,48 @@ function App() {
     </AuthProvider>
   );
 }
+
+// Optimized scroll progress bar component
+const ScrollProgressBar: React.FC = () => {
+  const [progress, setProgress] = useState(0);
+  
+  useEffect(() => {
+    let rafId: number;
+    let ticking = false;
+    
+    const updateProgress = () => {
+      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+      const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+      const newProgress = scrollHeight > 0 ? scrollTop / scrollHeight : 0;
+      setProgress(newProgress);
+      ticking = false;
+    };
+    
+    const onScroll = () => {
+      if (!ticking) {
+        rafId = requestAnimationFrame(updateProgress);
+        ticking = true;
+      }
+    };
+    
+    window.addEventListener('scroll', onScroll, { passive: true });
+    updateProgress();
+    
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      if (rafId) cancelAnimationFrame(rafId);
+    };
+  }, []);
+  
+  return (
+    <div 
+      className="fixed top-0 left-0 right-0 h-[2px] bg-brand-accent/20 z-[110] origin-left"
+      style={{ 
+        transform: `scaleX(${progress})`,
+        willChange: 'transform'
+      }}
+    />
+  );
+};
 
 export default App;

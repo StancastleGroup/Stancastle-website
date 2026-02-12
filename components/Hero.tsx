@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { motion, Variants } from 'framer-motion';
 import { Trophy, ChevronRight, Sparkles } from 'lucide-react';
 
@@ -51,6 +51,15 @@ const CrossingX: React.FC<{ delay: number }> = ({ delay }) => (
 );
 
 const ShiningDot: React.FC<{ index: number }> = ({ index }) => {
+  const [isMobile, setIsMobile] = React.useState(false);
+  
+  React.useEffect(() => {
+    setIsMobile(window.innerWidth < 768);
+  }, []);
+  
+  // Reduce dots on mobile for performance
+  if (isMobile && index > 20) return null;
+  
   const size = useMemo(() => Math.random() * 2 + 1, []);
   const initialX = useMemo(() => Math.random() * 100, []);
   const initialY = useMemo(() => Math.random() * 100, []);
@@ -66,12 +75,13 @@ const ShiningDot: React.FC<{ index: number }> = ({ index }) => {
         top: `${initialY}%`,
         filter: 'blur(1px)',
         opacity: 0.1,
+        willChange: 'opacity, transform',
       }}
-      animate={{
+      animate={isMobile ? {} : {
         opacity: [0.1, 0.4, 0.1],
         scale: [1, 1.5, 1],
       }}
-      transition={{
+      transition={isMobile ? {} : {
         duration: duration,
         repeat: Infinity,
         ease: "easeInOut",
@@ -85,19 +95,25 @@ interface HeroProps {
 }
 
 export const Hero: React.FC<HeroProps> = ({ onOpenBooking }) => {
+  const [isMobile, setIsMobile] = React.useState(false);
+  
+  React.useEffect(() => {
+    setIsMobile(window.innerWidth < 768);
+  }, []);
+  
   const container: Variants = {
     hidden: { opacity: 0 },
     show: {
       opacity: 1,
       transition: {
-        staggerChildren: 0.12,
-        delayChildren: 0.1
+        staggerChildren: isMobile ? 0.05 : 0.12,
+        delayChildren: isMobile ? 0 : 0.1
       }
     }
   };
 
   const item: Variants = {
-    hidden: { opacity: 0, y: 20 },
+    hidden: { opacity: 0, y: isMobile ? 0 : 20 },
     show: { 
       opacity: 1, 
       y: 0, 
@@ -105,7 +121,7 @@ export const Hero: React.FC<HeroProps> = ({ onOpenBooking }) => {
     }
   };
 
-  const dots = useMemo(() => Array.from({ length: 40 }), []);
+  const dots = useMemo(() => Array.from({ length: isMobile ? 15 : 40 }), [isMobile]);
 
   return (
     <section className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden bg-brand-dark pt-32 pb-16">
