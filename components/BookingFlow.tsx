@@ -273,15 +273,22 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
   };
 
   const validateUrl = (url: string): string => {
-    if (!url.trim()) return 'Company website is required';
+    const trimmed = url.trim();
+    if (!trimmed) return 'Company website is required';
     try {
-      const urlObj = new URL(url.trim());
-      if (!['http:', 'https:'].includes(urlObj.protocol)) {
-        return 'Website must start with http:// or https://';
+      // Accept with or without protocol (e.g. example.com or https://example.com)
+      const toParse = trimmed.includes('://') ? trimmed : `https://${trimmed}`;
+      const urlObj = new URL(toParse);
+      if (urlObj.protocol && !['http:', 'https:'].includes(urlObj.protocol)) {
+        return 'Website must use http:// or https://, or enter a domain (e.g. example.com)';
+      }
+      // Reject if hostname is empty or invalid
+      if (!urlObj.hostname || urlObj.hostname.length < 2) {
+        return 'Please enter a valid website or domain (e.g. example.com)';
       }
       return '';
     } catch {
-      return 'Please enter a valid website URL (e.g., https://example.com)';
+      return 'Please enter a valid website or domain (e.g. example.com)';
     }
   };
 
@@ -370,7 +377,12 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
           email: customerEmail || '',
           phone: formData.phone.trim() || null,
           company_name: formData.noCompany ? null : (formData.companyName.trim() || profile?.company || null),
-          company_website: formData.noCompany ? null : (formData.companyWebsite.trim() || null),
+          company_website: formData.noCompany ? null : (() => {
+            const raw = formData.companyWebsite.trim() || null;
+            if (!raw) return null;
+            if (raw.startsWith('http://') || raw.startsWith('https://')) return raw;
+            return `https://${raw}`;
+          })(),
           no_company: formData.noCompany || false,
           success_url: `${window.location.origin}?booking=success`,
           cancel_url: `${window.location.origin}?booking=cancelled`,
@@ -798,7 +810,7 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
                             const error = validateUrl(e.target.value);
                             if (error) setFormErrors((prev) => ({ ...prev, companyWebsite: error }));
                           }}
-                          placeholder="https://example.com"
+                          placeholder="example.com"
                           className={`w-full bg-white/[0.03] border rounded-xl px-4 py-3 text-white placeholder:text-brand-muted focus:outline-none transition-colors ${
                             formErrors.companyWebsite ? 'border-red-500/50 focus:border-red-500' : 'border-white/10 focus:border-brand-accent'
                           }`}
