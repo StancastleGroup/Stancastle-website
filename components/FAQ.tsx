@@ -46,20 +46,20 @@ const FAQItem: React.FC<{
   onClick: () => void; 
 }> = ({ item, isOpen, onClick }) => {
   return (
-    <div className={`mb-4 transition-all duration-500 ${isOpen ? 'scale-[1.02]' : 'scale-100'}`}>
+    <div className="mb-3 md:mb-4">
       <button
         onClick={onClick}
-        className={`w-full text-left p-6 md:p-8 rounded-2xl border transition-all duration-300 flex justify-between items-center group ${
+        className={`w-full text-left p-5 md:p-6 rounded-xl md:rounded-2xl border transition-all duration-200 flex justify-between items-center gap-4 group ${
           isOpen 
-            ? 'bg-white/[0.04] border-brand-accent shadow-[0_0_30px_rgba(217,70,239,0.1)]' 
-            : 'bg-white/[0.02] border-white/5 hover:border-white/20'
+            ? 'bg-white/[0.04] border-brand-accent/60 shadow-[0_0_20px_rgba(217,70,239,0.08)]' 
+            : 'bg-white/[0.02] border-white/5 hover:border-white/15'
         }`}
       >
-        <span className={`text-lg md:text-xl font-bold transition-colors ${isOpen ? 'text-white' : 'text-brand-muted-light group-hover:text-white'}`}>
+        <span className={`text-base md:text-lg font-bold transition-colors ${isOpen ? 'text-white' : 'text-brand-muted-light group-hover:text-white'}`}>
           {item.question}
         </span>
-        <div className={`shrink-0 ml-4 p-2 rounded-lg transition-all duration-300 ${isOpen ? 'bg-brand-accent text-white rotate-180' : 'bg-white/5 text-brand-muted-light'}`}>
-          {isOpen ? <Minus className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
+        <div className={`shrink-0 p-1.5 md:p-2 rounded-lg transition-all duration-200 ${isOpen ? 'bg-brand-accent text-white' : 'bg-white/5 text-brand-muted-light'}`}>
+          {isOpen ? <Minus className="w-4 h-4 md:w-5 md:h-5" /> : <Plus className="w-4 h-4 md:w-5 md:h-5" />}
         </div>
       </button>
       
@@ -72,7 +72,7 @@ const FAQItem: React.FC<{
             transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
             className="overflow-hidden"
           >
-            <div className="p-8 md:p-10 pt-4 text-brand-muted-light leading-relaxed text-lg whitespace-pre-wrap border-x border-b border-brand-accent/20 rounded-b-2xl bg-brand-accent/5">
+            <div className="p-5 md:p-8 pt-2 md:pt-4 text-brand-muted-light leading-relaxed text-base md:text-lg whitespace-pre-wrap border-x border-b border-brand-accent/20 rounded-b-xl md:rounded-b-2xl bg-brand-accent/5">
               <div className="prose prose-invert max-w-none">
                 {item.answer.split('\n\n').map((paragraph, i) => (
                   <p key={i} className={i !== 0 ? 'mt-4' : ''}>
@@ -91,25 +91,25 @@ const FAQItem: React.FC<{
 };
 
 export const FAQ: React.FC = () => {
-  const [openIndex, setOpenIndex] = useState<number | null>(0);
+  const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   return (
-    <Section id="faq" className="relative pb-40">
+    <Section id="faq" className="relative pb-24 md:pb-32">
       <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-brand-accent/5 rounded-full blur-[120px] pointer-events-none" />
       
       <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-16">
+        <div className="text-center mb-10 md:mb-14">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             className="flex flex-col items-center"
           >
-            <div className="p-3 bg-brand-accent/10 rounded-2xl mb-6">
-              <HelpCircle className="w-8 h-8 text-brand-accent" />
+            <div className="p-3 bg-brand-accent/10 rounded-xl mb-4 md:mb-6">
+              <HelpCircle className="w-6 h-6 md:w-8 md:h-8 text-brand-accent" />
             </div>
-            <h2 className="font-serif text-5xl md:text-6xl font-bold text-white mb-6">Strategic FAQ</h2>
-            <p className="text-xl text-brand-muted-light max-w-2xl font-light">
+            <h2 className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 md:mb-6 tracking-tight">Strategic FAQ</h2>
+            <p className="text-lg md:text-xl text-brand-muted-light max-w-2xl font-light leading-relaxed">
               We address the hidden objections sophisticated business owners have before they commit.
             </p>
           </motion.div>

@@ -26,7 +26,7 @@ export const Section: React.FC<SectionProps> = ({
     <section 
       id={id}
       ref={ref}
-      className={`py-12 md:py-20 relative overflow-hidden ${background === 'subtle' ? 'bg-brand-card/30' : ''} ${className}`}
+      className={`py-8 md:py-14 relative overflow-hidden ${background === 'subtle' ? 'bg-brand-card/30' : ''} ${className}`}
     >
       <div className="container mx-auto px-4 md:px-6 relative z-10 flex flex-col items-center justify-center">
         {isMobile ? (

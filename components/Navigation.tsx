@@ -1,6 +1,6 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, User, Instagram, LogIn } from 'lucide-react';
+import { Menu, X, LogIn } from 'lucide-react';
 import { Button } from './ui/Button';
 import { NavItem } from '../types';
 import { useAuth } from '../context/AuthContext';
@@ -13,40 +13,6 @@ const navItems: NavItem[] = [
   { label: 'Services', href: '#services' },
   { label: 'Results', href: '#results' },
 ];
-
-const TikTokIcon = ({ className }: { className?: string }) => (
-  <svg 
-    viewBox="0 0 24 24" 
-    fill="currentColor" 
-    className={className}
-    xmlns="http://www.w3.org/2000/svg"
-  >
-    <path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.65-1.58-1.15v10.07c-.01 4.56-5.59 6.72-8.67 3.33-3.05-3.35-1.12-9.17 3.7-8.47v4.3c-1.55.15-2.58 1.95-1.63 3.26.96 1.34 3.3 1.05 3.32-.98V.03c-.3-.01-.6-.01-.9-.01z"/>
-  </svg>
-);
-
-const SocialLinks = ({ className = "" }: { className?: string }) => (
-  <div className={`flex items-center gap-6 ${className}`}>
-    <a 
-      href="https://www.instagram.com/stancastlegroup/" 
-      target="_blank" 
-      rel="noopener noreferrer"
-      className="text-brand-muted hover:text-brand-accent transition-all transform hover:scale-125"
-      aria-label="Instagram"
-    >
-      <Instagram className="w-5 h-5" />
-    </a>
-    <a 
-      href="https://tiktok.com/@Stancastlegroup" 
-      target="_blank" 
-      rel="noopener noreferrer"
-      className="text-brand-muted hover:text-brand-accent transition-all transform hover:scale-125"
-      aria-label="TikTok"
-    >
-      <TikTokIcon className="w-5 h-5" />
-    </a>
-  </div>
-);
 
 export const Navigation: React.FC<{ onOpenBooking: () => void }> = ({ onOpenBooking }) => {
   const { session, profile, signOut } = useAuth();
@@ -121,7 +87,7 @@ export const Navigation: React.FC<{ onOpenBooking: () => void }> = ({ onOpenBook
                 width={96}
                 height={64}
                 decoding="async"
-                className="h-16 sm:h-20 xl:h-24 w-auto scale-x-[1.5] origin-left object-contain object-left rounded-xl transition-all duration-500 group-hover:opacity-90"
+                className="h-16 sm:h-20 xl:h-24 w-auto object-contain object-left rounded-xl transition-all duration-500 group-hover:opacity-90"
               />
             </a>
 
@@ -133,7 +99,7 @@ export const Navigation: React.FC<{ onOpenBooking: () => void }> = ({ onOpenBook
                     key={item.label}
                     href={item.href}
                     onClick={(e) => handleNavClick(e, item.href)}
-                    className="text-[12px] font-black uppercase tracking-[0.35em] text-brand-muted-light hover:text-white transition-all relative group whitespace-nowrap"
+                    className="nav-link text-sm xl:text-base font-bold uppercase tracking-[0.2em] xl:tracking-[0.25em] text-brand-muted-light hover:text-white transition-all relative group whitespace-nowrap"
                   >
                     {item.label}
                     <span className="absolute -bottom-2 left-0 w-0 h-[2px] bg-brand-accent transition-all duration-500 group-hover:w-full" />
@@ -142,18 +108,15 @@ export const Navigation: React.FC<{ onOpenBooking: () => void }> = ({ onOpenBook
               </div>
             </div>
 
-            {/* Desktop: right actions (social, sign in, button) - same breakpoint */}
+            {/* Desktop: right actions (sign in, button) */}
             <div className="hidden xl:flex items-center gap-6 2xl:gap-8 shrink-0">
-              <SocialLinks />
-              <div className="h-6 w-px bg-white/10 shrink-0" />
-              
               {session ? (
                 <div className="flex items-center gap-5">
                   <div className="text-right">
-                    <p className="text-sm font-black text-white leading-none mb-1">{profile?.first_name}</p>
-                    <span className="text-[9px] text-brand-accent uppercase tracking-widest font-black">Account Active</span>
+                    <p className="text-sm font-bold text-white leading-none mb-1">{profile?.first_name}</p>
+                    <span className="nav-link text-[10px] xl:text-xs text-brand-accent uppercase tracking-widest font-bold">Account Active</span>
                   </div>
-                  <Button variant="outline" size="sm" className="!px-5 !py-3 text-[10px] rounded-xl" onClick={() => signOut()}>
+                  <Button variant="outline" size="sm" className="!px-5 !py-3 text-xs rounded-xl" onClick={() => signOut()}>
                     Sign Out
                   </Button>
                 </div>
@@ -161,12 +124,12 @@ export const Navigation: React.FC<{ onOpenBooking: () => void }> = ({ onOpenBook
                 <div className="flex items-center gap-6 2xl:gap-8">
                   <button 
                     onClick={() => openAuth('signin')}
-                    className="flex items-center gap-2 text-[12px] font-black uppercase tracking-[0.3em] text-white hover:text-brand-accent transition-all group whitespace-nowrap"
+                    className="nav-link flex items-center gap-2 text-sm font-bold uppercase tracking-[0.2em] text-white hover:text-brand-accent transition-all group whitespace-nowrap"
                   >
                     <LogIn className="w-4 h-4 group-hover:-translate-x-1 transition-transform shrink-0" />
                     Sign In
                   </button>
-                  <Button variant="primary" size="sm" className="!px-8 !py-4 text-[11px] font-black uppercase tracking-[0.3em] rounded-2xl shrink-0" onClick={onOpenBooking}>
+                  <Button variant="primary" size="sm" className="!px-8 !py-4 text-xs font-bold uppercase tracking-[0.2em] rounded-2xl shrink-0" onClick={onOpenBooking}>
                     Book Diagnostic
                   </Button>
                 </div>
@@ -187,39 +150,34 @@ export const Navigation: React.FC<{ onOpenBooking: () => void }> = ({ onOpenBook
         <AnimatePresence>
           {isMobileMenuOpen && (
             <motion.div
-              initial={{ opacity: 0, y: -20, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -20, scale: 0.95 }}
-              className="xl:hidden absolute top-full left-6 right-6 mt-6 glass-panel border border-white/10 rounded-[3rem] overflow-hidden shadow-2xl z-[110]"
+              initial={{ opacity: 0, y: -12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+              className="xl:hidden absolute top-full left-4 right-4 mt-4 glass-panel border border-white/10 rounded-2xl overflow-hidden shadow-2xl z-[110]"
             >
-              <div className="p-12 flex flex-col gap-8">
+              <div className="p-6 sm:p-8 flex flex-col gap-6">
                 {navItems.map((item) => (
                   <a
                     key={item.label}
                     href={item.href}
                     onClick={(e) => handleNavClick(e, item.href)}
-                    className="text-3xl font-black text-white hover:text-brand-accent transition-colors uppercase tracking-widest"
+                    className="text-lg sm:text-xl font-bold text-white hover:text-brand-accent transition-colors uppercase tracking-[0.2em]"
                   >
                     {item.label}
                   </a>
                 ))}
-                
-                <div className="h-px bg-white/10 my-4" />
-                
+                <div className="h-px bg-white/10 my-2" />
                 {session ? (
-                  <Button onClick={() => signOut()} size="lg">Sign Out</Button>
+                  <Button onClick={() => signOut()} size="lg" className="w-full justify-center">Sign Out</Button>
                 ) : (
-                  <div className="flex flex-col gap-6">
-                    <button onClick={() => openAuth('signin')} className="flex items-center gap-4 text-3xl font-black text-white uppercase tracking-widest">
-                      <LogIn className="w-8 h-8" /> Sign In
+                  <div className="flex flex-col gap-4">
+                    <button onClick={() => openAuth('signin')} className="flex items-center justify-center gap-3 py-3 text-base font-bold text-white uppercase tracking-widest hover:text-brand-accent transition-colors">
+                      <LogIn className="w-5 h-5" /> Sign In
                     </button>
-                    <Button onClick={onOpenBooking} size="lg">Book Diagnostic</Button>
+                    <Button onClick={onOpenBooking} size="lg" className="w-full justify-center">Book Diagnostic</Button>
                   </div>
                 )}
-
-                <div className="flex justify-center pt-8">
-                  <SocialLinks />
-                </div>
               </div>
             </motion.div>
           )}

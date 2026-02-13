@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Section } from './ui/Section';
 import { Button } from './ui/Button';
-import { Phone, Clock, Send, CheckCircle2 } from 'lucide-react';
+import { Phone, Clock, CheckCircle2 } from 'lucide-react';
 
 export const ContactForm: React.FC = () => {
   const [status, setStatus] = useState<'idle' | 'submitting' | 'success'>('idle');
@@ -14,19 +14,20 @@ export const ContactForm: React.FC = () => {
   };
 
   return (
-    <Section id="contact" className="pb-32 bg-gradient-to-b from-brand-dark to-[#050508]">
+    <Section id="contact" className="pb-20 md:pb-28 bg-gradient-to-b from-brand-dark to-[#050508]">
       <div className="max-w-6xl mx-auto">
+        {/* Section title — centered */}
+        <h2 className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold mb-4 md:mb-6 text-white leading-tight tracking-tight text-center">
+          Stop Paying For <br />
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-accent to-brand-glow">
+            Empty Promises.
+          </span>
+        </h2>
+
         <div className="grid lg:grid-cols-2 gap-16 items-center">
-          
           {/* Left Side: Copy & Phone CTA */}
           <div>
-            <h2 className="font-serif text-4xl md:text-6xl font-bold mb-6 text-white leading-tight">
-              Stop Paying For <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-500 to-purple-500">
-                Empty Promises.
-              </span>
-            </h2>
-            <p className="text-lg text-brand-muted-light mb-10 leading-relaxed">
+            <p className="text-lg text-brand-muted-light mb-8 md:mb-10 leading-relaxed font-light">
               If you're serious about building your business with structure and clarity, speak to us. 
               We only work with companies where we believe we can add significant value.
             </p>
@@ -49,7 +50,7 @@ export const ContactForm: React.FC = () => {
                     020 8064 2496
                   </div>
                   <div className="flex items-center gap-2 text-sm text-brand-muted-light">
-                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                    <div className="w-2 h-2 rounded-full bg-green-500 md:animate-pulse" />
                     Available now for strategic inquiries
                   </div>
                 </a>
@@ -110,6 +111,7 @@ export const ContactForm: React.FC = () => {
                     <input 
                       type="tel" 
                       placeholder="07700 900000"
+                      required
                       className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-brand-muted focus:outline-none focus:border-brand-accent transition-colors"
                     />
                   </div>
@@ -130,7 +132,6 @@ export const ContactForm: React.FC = () => {
                     disabled={status === 'submitting'}
                   >
                     {status === 'submitting' ? 'Sending...' : 'Submit Enquiry'}
-                    <Send className="w-4 h-4 ml-2" />
                   </Button>
                 </div>
               </form>

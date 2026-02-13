@@ -3,14 +3,14 @@ import { Section } from './ui/Section';
 
 export const ProblemSection: React.FC = () => {
   return (
-    <Section id="problem" className="bg-[#050508] border-y border-white/5 pt-16 pb-16 md:pt-24 md:pb-24">
+    <Section id="problem" className="bg-[#050508] border-y border-white/5 pt-10 pb-10 md:pt-16 md:pb-16">
       <div className="max-w-4xl mx-auto text-center flex flex-col items-center">
-        <h2 className="font-serif text-4xl md:text-5xl lg:text-7xl font-bold mb-8 leading-[1.1] tracking-tight">
+        <h2 className="font-serif text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-white mb-6 md:mb-8 leading-[1.1] tracking-tight">
           You're Not Lazy. You're Just <br />
-          <span className="text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.15)]">Solving The Wrong Problem.</span>
+          <span className="drop-shadow-[0_0_15px_rgba(255,255,255,0.15)]">Solving The Wrong Problem.</span>
         </h2>
         
-        <div className="space-y-6 text-xl md:text-2xl text-brand-muted-light leading-relaxed font-light">
+        <div className="space-y-5 md:space-y-6 text-lg md:text-xl lg:text-2xl text-brand-muted-light leading-relaxed font-light">
           <p>
             You wake up every day and execute. You market. You optimize. You feel like you're moving a mountain, but when you look at the EBITDA at the end of the quarter, the needle hasn't moved.
           </p>

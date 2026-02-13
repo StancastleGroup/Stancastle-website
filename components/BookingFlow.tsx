@@ -334,7 +334,7 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
       console.warn('[BookingFlow] Form validation failed');
       return;
     }
-    
+
     if (!session) {
       console.warn('[BookingFlow] No session');
       alert('Please sign in first to schedule a call. Click "Sign In" in the navigation menu to continue.');
@@ -361,13 +361,13 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
       // Don't create appointment yet - only create after payment succeeds
       // Pass booking details to create-checkout, which will store them in Stripe metadata
       const res = await fetch(`${supabaseUrl}/functions/v1/create-checkout`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
           'apikey': supabaseAnonKey,
-        },
-        body: JSON.stringify({
-          service_type: selectedService,
+          },
+          body: JSON.stringify({
+            service_type: selectedService,
           user_id: tokenSession.user.id,
           // Booking details (will be stored in Stripe metadata and used to create appointment after payment)
           date: dateStr,
@@ -384,8 +384,8 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
             return `https://${raw}`;
           })(),
           no_company: formData.noCompany || false,
-          success_url: `${window.location.origin}?booking=success`,
-          cancel_url: `${window.location.origin}?booking=cancelled`,
+            success_url: `${window.location.origin}?booking=success`,
+            cancel_url: `${window.location.origin}?booking=cancelled`,
           customer_email: customerEmail || undefined,
         }),
       });
@@ -440,7 +440,7 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
         console.warn('[BookingFlow] Replace failed, trying href:', err1);
         try {
           // Method 2: window.location.href (standard method)
-          window.location.href = url;
+      window.location.href = url;
         } catch (err2) {
           console.warn('[BookingFlow] Href failed, trying window.open:', err2);
           try {
@@ -494,20 +494,20 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
         {isMobile ? (
           <div onClick={onClose} className="absolute inset-0 bg-black/90" aria-hidden />
         ) : (
-          <motion.div 
-            initial={{ opacity: 0 }} 
-            animate={{ opacity: 1 }} 
-            exit={{ opacity: 0 }}
+        <motion.div 
+          initial={{ opacity: 0 }} 
+          animate={{ opacity: 1 }} 
+          exit={{ opacity: 0 }} 
             transition={{ duration: 0.2 }} 
-            onClick={onClose}
-            className="absolute inset-0 bg-black/90 backdrop-blur-xl"
-          />
+          onClick={onClose}
+          className="absolute inset-0 bg-black/90 backdrop-blur-xl"
+        />
         )}
         
         <ModalPanel {...modalPanelProps}>
-          <div className="p-6 md:p-8 border-b border-white/5 flex items-center justify-between shrink-0">
+          <div className="p-5 md:p-8 border-b border-white/5 flex items-center justify-between shrink-0">
             <div>
-              <h2 className="text-2xl font-serif font-bold text-white">
+              <h2 className="text-xl md:text-2xl font-serif font-bold text-white tracking-tight">
                 {step === 'service' && 'Select Service'}
                 {step === 'calendar' && 'Choose Your Slot'}
                 {step === 'details' && 'Secure Checkout'}
@@ -534,11 +534,11 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
                     <button 
                       key={key} 
                       onClick={() => { setSelectedService(key as any); setStep('calendar'); }} 
-                      className="text-left p-8 rounded-2xl border border-white/5 bg-white/[0.02] hover:border-fuchsia-500 transition-all"
+                      className="text-left p-6 md:p-8 rounded-xl md:rounded-2xl border border-white/5 bg-white/[0.02] hover:border-brand-accent/50 transition-all duration-200"
                     >
-                      <h3 className="text-2xl font-bold text-white mb-2">{s.title}</h3>
-                      <p className="text-brand-muted-light text-sm mb-8">{s.description}</p>
-                      <span className="text-3xl font-bold text-white">{s.price}</span>
+                      <h3 className="text-xl md:text-2xl font-bold text-white mb-2">{s.title}</h3>
+                      <p className="text-brand-muted-light text-sm mb-6 md:mb-8 leading-relaxed">{s.description}</p>
+                      <span className="text-2xl md:text-3xl font-bold text-white">{s.price}</span>
                     </button>
                   ))}
                 </motion.div>
@@ -603,8 +603,8 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
                           {calendarGrid.map((cell, i) => {
                             const isSelected = selectedDate && cell.date.toDateString() === selectedDate.toDateString();
                             const canClick = cell.isCurrentMonth && cell.isBookable && !cell.isPast;
-                            return (
-                              <button
+                         return (
+                           <button 
                                 key={`${cell.date.getTime()}-${i}`}
                                 type="button"
                                 disabled={!canClick}
@@ -624,10 +624,10 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
                                 `}
                               >
                                 {cell.date.getDate()}
-                              </button>
-                            );
-                          })}
-                        </div>
+                           </button>
+                         );
+                       })}
+                     </div>
                       </>
                     )}
                   </div>
@@ -642,16 +642,16 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
                         ) : (
                           <div className="flex flex-col gap-2">
                             {availableSlotsForSelectedDate.map((time) => (
-                              <button
+                        <button 
                                 key={time}
                                 type="button"
                                 onClick={() => setSelectedTime(time)}
                                 className={`py-3 px-4 rounded-xl text-sm font-medium border transition-all text-left ${selectedTime === time ? 'bg-brand-accent border-brand-accent text-white' : 'border-white/10 text-brand-muted-light hover:border-white/20 hover:text-white'}`}
                               >
                                 {formatTimeLabel(time)}
-                              </button>
-                            ))}
-                          </div>
+                        </button>
+                      ))}
+                    </div>
                         )}
                         <Button className="mt-6 w-full" disabled={!selectedTime} onClick={() => setStep('details')}>
                           Continue
@@ -710,9 +710,9 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-brand-muted-light uppercase tracking-wider mb-1.5">Email *</label>
-                    <input
-                      type="email"
-                      value={formData.email}
+                    <input 
+                      type="email" 
+                      value={formData.email} 
                       onChange={(e) => {
                         const value = e.target.value;
                         setFormData((prev) => ({ ...prev, email: value }));
@@ -849,7 +849,7 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
                           ? `Sign in to pay ${SERVICES[selectedService].price}`
                           : `Pay ${SERVICES[selectedService].price} & confirm`
                       }
-                    </Button>
+                      </Button>
                   </div>
                 </motion.div>
               )}

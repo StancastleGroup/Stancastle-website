@@ -159,7 +159,7 @@ export const Testimonials: React.FC = () => {
   const row3 = testimonials.slice(6, 9);
 
   return (
-    <section id="results" className="bg-[#050508] py-20 md:py-32 relative overflow-hidden">
+    <section id="results" className="bg-[#050508] py-12 md:py-20 relative overflow-hidden">
       {/* Background - no pulse on mobile for performance */}
       <div className="absolute top-0 left-0 w-full h-full pointer-events-none" aria-hidden="true">
         <div className="absolute top-[10%] left-[15%] w-[40vw] h-[40vw] bg-fuchsia-600/5 rounded-full blur-[120px] md:animate-pulse" />
@@ -167,7 +167,7 @@ export const Testimonials: React.FC = () => {
       </div>
 
       {/* Header - contained; no motion on mobile for performance */}
-      <div className="container mx-auto px-4 md:px-6 mb-12 md:mb-16 text-center relative z-20">
+      <div className="container mx-auto px-4 md:px-6 mb-8 md:mb-12 text-center relative z-20">
         <div className="opacity-100">
           <span className="text-brand-accent font-bold tracking-[0.3em] uppercase text-xs mb-3 md:mb-4 block">Proof of Work</span>
           <h2 className="font-serif text-4xl md:text-6xl lg:text-7xl font-bold text-white mb-6 md:mb-8 tracking-tight">
@@ -193,11 +193,11 @@ export const Testimonials: React.FC = () => {
       </div>
 
       {/* CTA - contained, centered; no motion on mobile */}
-      <div className="container mx-auto px-4 md:px-6 mt-16 md:mt-24 relative z-20 flex justify-center">
+      <div className="container mx-auto px-4 md:px-6 mt-10 md:mt-14 relative z-20 flex justify-center">
         <div className="flex justify-center">
           <Button 
-            size="lg" 
-            className="!px-12 md:!px-16 !py-6 md:!py-8 text-xl md:text-2xl font-bold bg-gradient-to-r from-fuchsia-600 to-purple-600 shadow-[0_0_50px_rgba(217,70,239,0.3)] hover:shadow-[0_0_70px_rgba(217,70,239,0.5)] transition-all duration-500"
+            size="md" 
+            className="!px-8 md:!px-10 !py-4 md:!py-5 text-base md:text-lg font-bold bg-gradient-to-r from-fuchsia-600 to-purple-600 shadow-[0_0_50px_rgba(217,70,239,0.3)] hover:shadow-[0_0_70px_rgba(217,70,239,0.5)] transition-all duration-500"
             onClick={() => document.getElementById('services')?.scrollIntoView({ behavior: 'smooth' })}
           >
             Book Your Session

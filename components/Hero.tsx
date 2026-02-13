@@ -123,7 +123,7 @@ export const Hero: React.FC<HeroProps> = ({ onOpenBooking }) => {
   const dots = useMemo(() => Array.from({ length: isMobile ? 8 : 40 }), [isMobile]);
 
   return (
-    <section className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden bg-brand-dark pt-32 pb-16">
+    <section className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden bg-brand-dark pt-48 md:pt-56 pb-16">
       {/* Cinematic Ambience - reduced blur on mobile */}
       <div className="absolute inset-0 z-0 pointer-events-none">
         <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_40%,rgba(217,70,239,0.06)_0%,rgba(5,5,8,0)_70%)]" />
@@ -219,11 +219,11 @@ export const Hero: React.FC<HeroProps> = ({ onOpenBooking }) => {
             </motion.span>
           </motion.p>
           
-          {/* Refined & Smaller CTA Button */}
+          {/* Refined CTA Button - compact on mobile and laptop */}
           <motion.div variants={item} className="flex justify-center pb-12 px-4">
             <button 
               onClick={onOpenBooking}
-              className="group relative w-full max-w-sm md:max-w-md lg:max-w-lg px-6 md:px-10 py-4 md:py-5 lg:px-14 lg:py-7 rounded-[1.5rem] md:rounded-[1.75rem] overflow-hidden transition-all duration-500 hover:scale-[1.03] active:scale-95 border-2 border-white/30 md:border-white/5 touch-manipulation"
+              className="group relative w-full max-w-[280px] sm:max-w-xs md:max-w-sm px-5 md:px-8 py-3 md:py-4 rounded-xl md:rounded-2xl overflow-hidden transition-all duration-500 hover:scale-[1.03] active:scale-95 border-2 border-white/30 md:border-white/5 touch-manipulation"
               style={{ 
                 backgroundColor: '#d946ef',
                 boxShadow: '0 20px 50px rgba(217, 70, 239, 0.5), 0 0 30px rgba(217, 70, 239, 0.3)'
@@ -232,12 +232,12 @@ export const Hero: React.FC<HeroProps> = ({ onOpenBooking }) => {
               <div className="absolute inset-0 bg-gradient-to-r from-fuchsia-600 via-purple-600 to-purple-700 opacity-100" style={{ backgroundSize: '300% 100%' }} />
               <div className="absolute top-0 -left-[100%] w-[150%] h-full bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-[35deg] transition-all duration-1000 group-hover:left-[100%]" />
               
-              <div className="relative z-10 flex items-center justify-center gap-3 md:gap-6 flex-wrap md:flex-nowrap">
-                <span className="text-base md:text-xl lg:text-3xl font-black text-white uppercase tracking-[0.15em] md:tracking-[0.25em] drop-shadow-2xl text-center">
+              <div className="relative z-10 flex items-center justify-center gap-2 md:gap-4 flex-wrap md:flex-nowrap">
+                <span className="text-sm md:text-base lg:text-lg font-bold text-white uppercase tracking-[0.12em] md:tracking-[0.2em] drop-shadow-2xl text-center">
                   Take a step today!
                 </span>
-                <div className="flex items-center justify-center w-8 h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 bg-white/40 md:bg-white/20 rounded-xl backdrop-blur-sm md:backdrop-blur-md border-2 border-white/60 md:border-white/30 group-hover:bg-white/40 group-hover:translate-x-3 transition-all duration-500 shrink-0">
-                  <ChevronRight className="w-5 h-5 md:w-6 md:h-6 lg:w-8 lg:h-8 text-white stroke-[3px] md:stroke-[4px]" />
+                <div className="flex items-center justify-center w-7 h-7 md:w-8 md:h-8 bg-white/40 md:bg-white/20 rounded-lg md:rounded-xl backdrop-blur-sm border-2 border-white/60 md:border-white/30 group-hover:bg-white/40 group-hover:translate-x-2 transition-all duration-500 shrink-0">
+                  <ChevronRight className="w-4 h-4 md:w-5 md:h-5 text-white stroke-[2.5px] md:stroke-[3px]" />
                 </div>
               </div>
             </button>

@@ -5,11 +5,11 @@ import { Target, Shield, Zap, TrendingUp } from 'lucide-react';
 
 export const About: React.FC = () => {
   return (
-    <Section id="about" className="bg-brand-dark relative pt-12 pb-20">
+    <Section id="about" className="bg-brand-dark relative pt-8 pb-14">
       <div className="max-w-6xl mx-auto text-center flex flex-col items-center">
         
         {/* Header */}
-        <div className="mb-12 flex flex-col items-center">
+        <div className="mb-8 md:mb-12 flex flex-col items-center">
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -21,8 +21,8 @@ export const About: React.FC = () => {
               <div className="h-px w-8 bg-brand-accent/50" />
             </motion.div>
             
-            <h2 className="font-serif text-5xl md:text-6xl font-bold text-white mb-6">Strategy as Engineering.</h2>
-            <p className="text-xl text-brand-muted-light max-w-2xl font-light leading-relaxed">
+            <h2 className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 md:mb-6 tracking-tight">Strategy as Engineering.</h2>
+            <p className="text-lg md:text-xl text-brand-muted-light max-w-2xl font-light leading-relaxed">
               We apply first-principles thinking to the structural bottlenecks of high-growth British businesses.
             </p>
         </div>

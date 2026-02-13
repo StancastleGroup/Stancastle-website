@@ -2,14 +2,52 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Design tokens for consistency */
+:root {
+  --brand-dark: #050508;
+  --brand-card: #0f0f13;
+  --brand-accent: #d946ef;
+  --brand-text: #f8fafc;
+  --brand-muted: #94a3b8;
+  --brand-muted-light: #b8c5d6;
+  --section-padding-y: 3rem;   /* 48px mobile */
+  --section-padding-y-md: 5rem; /* 80px desktop */
+  --container-padding-x: 1rem;
+  --container-padding-x-md: 1.5rem;
+}
+
 body {
-  background-color: #050508;
-  color: #f8fafc;
+  background-color: var(--brand-dark);
+  color: var(--brand-text);
   overflow-x: hidden;
-  /* Mobile performance optimizations */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  font-feature-settings: "kern" 1;
+}
+
+/* Navbar links: sharper text, no blur */
+.nav-link {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Optional utility classes for section headings (use when you want responsive scale) */
+.section-title {
+  font-family: var(--font-serif, 'Playfair Display', serif);
+  font-weight: 700;
+  color: var(--brand-text);
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  font-size: clamp(1.875rem, 4vw + 1rem, 3.75rem);
+}
+
+.section-subtitle {
+  color: var(--brand-muted-light);
+  font-weight: 300;
+  line-height: 1.6;
+  font-size: clamp(1rem, 2vw + 0.5rem, 1.25rem);
 }
 
 /* Mobile performance: reduce animations and improve scrolling */

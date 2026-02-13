@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { LegalModals, LegalType } from './LegalModals';
 import { AnimatePresence } from 'framer-motion';
-import { Instagram, Phone, Clock } from 'lucide-react';
+import { Instagram, Phone, Clock, MapPin, Mail } from 'lucide-react';
 
 // Custom TikTok Icon Component
 const TikTokIcon = ({ className }: { className?: string }) => (
@@ -28,7 +28,7 @@ export const Footer: React.FC = () => {
   ];
 
   return (
-    <footer className="border-t border-white/5 pt-20 pb-12 bg-[#050508] relative overflow-hidden">
+    <footer className="border-t border-white/5 pt-14 pb-10 bg-[#050508] relative overflow-hidden">
       <AnimatePresence>
         {legalType && (
           <LegalModals type={legalType} onClose={() => setLegalType(null)} />
@@ -36,62 +36,24 @@ export const Footer: React.FC = () => {
       </AnimatePresence>
 
       <div className="container mx-auto px-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
-          <div className="space-y-6">
-            <h3 className="font-serif text-2xl font-bold text-white">Stancastle</h3>
-            <p className="text-sm text-brand-muted-light max-w-sm leading-relaxed">
-              Fixing actual business problems with clear thinking. No corporate theatre, just structural impact for senior business owners.
-            </p>
-            
-            <div className="space-y-4 pt-4 border-t border-white/5">
-               <a href="tel:02080642496" className="flex items-center gap-3 text-white hover:text-brand-accent transition-colors group">
-                 <div className="p-2 bg-white/5 rounded-lg group-hover:bg-brand-accent/20 transition-colors">
-                    <Phone className="w-4 h-4" />
-                 </div>
-                 <span className="font-bold tracking-wide">020 8064 2496</span>
-               </a>
-               <div className="flex items-start gap-3 text-brand-muted-light">
-                 <div className="p-2 bg-white/5 rounded-lg shrink-0">
-                    <Clock className="w-4 h-4" />
-                 </div>
-                 <div className="text-sm leading-relaxed">
-                    <p>Mon - Sat: 8am - 6pm</p>
-                    <p>Sun: Closed</p>
-                 </div>
-               </div>
-            </div>
-
-            <div className="flex items-center gap-4 pt-4 border-t border-white/5">
-              <a 
-                href="https://www.instagram.com/stancastlegroup/" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-brand-muted hover:text-white transition-colors"
-                aria-label="Instagram"
-              >
-                <Instagram className="w-5 h-5" />
-              </a>
-              <a 
-                href="https://tiktok.com/@Stancastlegroup" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-brand-muted hover:text-white transition-colors"
-                aria-label="TikTok"
-              >
-                <TikTokIcon className="w-5 h-5" />
-              </a>
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-10 mb-12 items-start">
+          {/* Column 1: Stancastle — full width on mobile, narrower on desktop; top-aligned with other columns */}
+          <div className="col-span-2 lg:col-span-1 min-w-0 w-full">
+            <div className="space-y-6 w-full lg:max-w-[220px]">
+              <h3 className="font-serif text-2xl font-bold text-white">Stancastle</h3>
+              <p className="text-sm text-brand-muted-light leading-relaxed">
+                Fixing actual business problems with clear thinking. No corporate theatre, just structural impact for senior business owners.
+              </p>
             </div>
           </div>
 
-          <div className="space-y-4">
-            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-fuchsia-500">Legal</h4>
+          {/* Column 2: Legal — equal width column */}
+          <div className="space-y-4 min-w-0">
+            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-brand-accent">Legal</h4>
             <ul className="space-y-2">
               {legalLinks.map((link) => (
                 <li key={link.type}>
-                  <button 
-                    onClick={() => setLegalType(link.type)}
-                    className="text-sm text-brand-muted-light hover:text-white transition-colors text-left"
-                  >
+                  <button onClick={() => setLegalType(link.type)} className="text-sm text-brand-muted-light hover:text-white transition-colors text-left">
                     {link.label}
                   </button>
                 </li>
@@ -99,45 +61,57 @@ export const Footer: React.FC = () => {
             </ul>
           </div>
 
-          <div className="space-y-4">
-            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-fuchsia-500">Resources</h4>
-            <ul className="space-y-2">
-              <li>
-                <button 
-                  onClick={() => document.getElementById('faq')?.scrollIntoView({ behavior: 'smooth' })}
-                  className="text-sm text-brand-muted-light hover:text-white transition-colors"
-                >
-                  Strategic FAQ
-                </button>
-              </li>
-              <li>
-                <button 
-                  onClick={() => document.getElementById('results')?.scrollIntoView({ behavior: 'smooth' })}
-                  className="text-sm text-brand-muted-light hover:text-white transition-colors"
-                >
-                  Client Results
-                </button>
-              </li>
-              <li>
-                <a href="mailto:contact@stancastle.com" className="text-sm text-brand-muted-light hover:text-white transition-colors">
-                  contact@stancastle.com
-                </a>
-              </li>
-            </ul>
+          {/* Column 3: Contact — address, phone, hours only; equal width column */}
+          <div className="space-y-4 min-w-0">
+            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-brand-accent">Contact</h4>
+            <div className="flex flex-col gap-4">
+              <div className="flex items-start gap-3 text-brand-muted-light">
+                <div className="p-2 bg-white/5 rounded-lg shrink-0">
+                  <MapPin className="w-4 h-4" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-brand-muted mb-1">Registered Office</p>
+                  <p className="text-sm leading-relaxed">
+                    Flat 3, 216 Wash Lane<br />
+                    Bury, England, BL9 7DR
+                  </p>
+                </div>
+              </div>
+              <a href="tel:02080642496" className="flex items-start gap-3 text-brand-muted-light hover:text-white transition-colors">
+                <div className="p-2 bg-white/5 rounded-lg shrink-0">
+                  <Phone className="w-4 h-4" />
+                </div>
+                <span className="text-sm leading-relaxed">020 8064 2496</span>
+              </a>
+              <div className="flex items-start gap-3 text-brand-muted-light">
+                <div className="p-2 bg-white/5 rounded-lg shrink-0">
+                  <Clock className="w-4 h-4" />
+                </div>
+                <div className="text-sm leading-relaxed">
+                  <p>Mon - Sat: 8am - 6pm</p>
+                  <p>Sun: Closed</p>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div className="lg:text-right space-y-4">
-             <div className="inline-block p-4 rounded-2xl bg-white/[0.02] border border-white/5">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-brand-muted mb-2">Registered Office</p>
-                <p className="text-xs text-brand-muted-light leading-relaxed">
-                  Flat 3, 216 Wash Lane<br />
-                  Bury, England, BL9 7DR
-                </p>
-             </div>
+          {/* Social icons: full-width row below three columns, centered — closer to columns */}
+          <div className="col-span-2 lg:col-span-3 flex justify-center pt-2 lg:pt-3 border-t border-white/5 mt-2 lg:mt-3">
+            <div className="flex items-center gap-6">
+              <a href="https://www.instagram.com/stancastlegroup/" target="_blank" rel="noopener noreferrer" className="text-brand-muted hover:text-white transition-colors" aria-label="Instagram">
+                <Instagram className="w-5 h-5" />
+              </a>
+              <a href="https://tiktok.com/@Stancastlegroup" target="_blank" rel="noopener noreferrer" className="text-brand-muted hover:text-white transition-colors" aria-label="TikTok">
+                <TikTokIcon className="w-5 h-5" />
+              </a>
+              <a href="mailto:contact@stancastle.com" className="text-brand-muted hover:text-white transition-colors" aria-label="Email">
+                <Mail className="w-5 h-5" />
+              </a>
+            </div>
           </div>
         </div>
 
-        <div className="pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6">
+        <div className="pt-5 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6">
           <div className="text-[10px] text-brand-muted uppercase tracking-[0.2em] font-medium text-center md:text-left">
             © 2025 Stancastle Ltd. All rights reserved. <br className="md:hidden" />
             Company No. 16036016 | Registered in England and Wales
