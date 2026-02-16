@@ -53,10 +53,10 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
 
-    // Select base fields + zoom_join_url so Meeting Details email can show the link when Zoom was created.
+    // Select base fields + zoom_join_url + guest fields (for guest bookings, user_id is null)
     const { data: appointment, error: appError } = await supabase
       .from('appointments')
-      .select('id, user_id, date, time, service_type, zoom_join_url')
+      .select('id, user_id, date, time, service_type, zoom_join_url, email, first_name, last_name')
       .eq('id', appointment_id)
       .single();
 
@@ -84,7 +84,6 @@ serve(async (req) => {
       if (profile?.email) email = profile.email;
       if (profile?.first_name) firstName = profile.first_name;
       if (profile?.last_name) lastName = profile.last_name;
-      // Fallback: get email from auth.users if profiles has no email column or it's empty
       if (!email?.trim()) {
         const { data: { user: authUser } } = await supabase.auth.admin.getUserById(appointment.user_id);
         if (authUser?.email) {
@@ -92,6 +91,11 @@ serve(async (req) => {
           if (!firstName?.trim() && authUser.user_metadata?.full_name) firstName = authUser.user_metadata.full_name;
         }
       }
+    } else {
+      // Guest booking: use appointment row fields
+      email = appointment.email ?? null;
+      firstName = appointment.first_name ?? '';
+      lastName = appointment.last_name ?? '';
     }
 
     if (!email?.trim()) {

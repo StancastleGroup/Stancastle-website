@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { X, Mail, Lock, Building2, User, ArrowRight, AlertCircle } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { X, Mail, Lock, Building2, User, ArrowRight, AlertCircle, Phone, Globe } from 'lucide-react';
 import { Button } from './ui/Button';
 import { supabase } from '../lib/supabase';
+import { validateEmail, validatePhone, validateUrl } from '../lib/validation';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -18,56 +19,94 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultVi
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [company, setCompany] = useState('');
+  const [phone, setPhone] = useState('');
+  const [companyWebsite, setCompanyWebsite] = useState('');
+  const [noCompany, setNoCompany] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
     setPasswordError(null);
+    setFieldErrors({});
 
     try {
       if (view === 'signup') {
-        // Validate password match
+        const errors: Record<string, string> = {};
+        if (!firstName.trim()) errors.firstName = 'First name is required';
+        if (!lastName.trim()) errors.lastName = 'Last name is required';
+        const emailErr = validateEmail(email);
+        if (emailErr) errors.email = emailErr;
+        const phoneErr = validatePhone(phone);
+        if (phoneErr) errors.phone = phoneErr;
+        if (!noCompany) {
+          if (!company.trim()) errors.company = 'Company name is required';
+          const urlErr = validateUrl(companyWebsite, true);
+          if (urlErr) errors.companyWebsite = urlErr;
+        }
         if (password !== confirmPassword) {
           setPasswordError('Passwords do not match');
           setLoading(false);
           return;
         }
-        
-        // Validate password strength (minimum 6 characters)
         if (password.length < 6) {
           setPasswordError('Password must be at least 6 characters long');
           setLoading(false);
           return;
         }
+        if (Object.keys(errors).length > 0) {
+          setFieldErrors(errors);
+          setLoading(false);
+          return;
+        }
 
-        const { data, error } = await supabase.auth.signUp({
-          email,
+        const { data, error: signUpError } = await supabase.auth.signUp({
+          email: email.trim(),
           password,
           options: {
             data: {
-              first_name: firstName,
-              last_name: lastName,
-              company: company,
+              first_name: firstName.trim(),
+              last_name: lastName.trim(),
+              company: noCompany ? null : company.trim(),
+              phone: phone.trim() || null,
+              company_website: noCompany ? null : (companyWebsite.trim() ? (companyWebsite.trim().includes('://') ? companyWebsite.trim() : `https://${companyWebsite.trim()}`) : null),
             },
           },
         });
-        if (error) throw error;
-        // Auto sign in happens if email confirmation is disabled, otherwise they need to verify
-        // For this demo, assuming standard flow
+        if (signUpError) throw signUpError;
+        if (data?.user?.id) {
+          const website = noCompany ? null : (companyWebsite.trim() ? (companyWebsite.trim().includes('://') ? companyWebsite.trim() : `https://${companyWebsite.trim()}`) : null);
+          await supabase.from('profiles').update({
+            phone: phone.trim() || null,
+            company_website: website,
+            company: noCompany ? null : company.trim(),
+          }).eq('id', data.user.id);
+        }
       } else {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
+        const emailErr = validateEmail(email);
+        if (emailErr) {
+          setFieldErrors({ email: emailErr });
+          setLoading(false);
+          return;
+        }
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: email.trim(),
           password,
         });
-        if (error) throw error;
+        if (signInError) throw signInError;
       }
       onClose();
     } catch (err: any) {
-      setError(err.message || 'An error occurred');
+      const msg = err?.message || 'An error occurred';
+      if (view === 'signup' && (msg.includes('already been registered') || msg.includes('User already registered') || msg.includes('already exists'))) {
+        setError('This email is already registered. Please sign in instead.');
+      } else {
+        setError(msg);
+      }
     } finally {
       setLoading(false);
     }
@@ -138,36 +177,91 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultVi
                     />
                   </div>
                 </div>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="authNoCompany"
+                    checked={noCompany}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setNoCompany(checked);
+                      if (checked) {
+                        setCompany('');
+                        setCompanyWebsite('');
+                        setFieldErrors((prev) => ({ ...prev, company: '', companyWebsite: '' }));
+                      }
+                    }}
+                    className="rounded border-white/20 bg-white/5 text-brand-accent focus:ring-brand-accent"
+                  />
+                  <label htmlFor="authNoCompany" className="text-sm text-brand-muted-light cursor-pointer">I don&apos;t have a company</label>
+                </div>
+                {!noCompany && (
+                  <>
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-brand-muted-light uppercase ml-1">Company *</label>
+                      <div className="relative">
+                        <Building2 className="absolute left-3 top-3.5 w-4 h-4 text-brand-muted" />
+                        <input 
+                          type="text" 
+                          value={company}
+                          onChange={(e) => { setCompany(e.target.value); if (fieldErrors.company) setFieldErrors((p) => ({ ...p, company: '' })); }}
+                          onBlur={() => setFieldErrors((p) => ({ ...p, company: !company.trim() ? 'Company name is required' : '' }))}
+                          className={`w-full bg-white/5 border rounded-xl pl-10 pr-4 py-3 text-white focus:outline-none transition-colors ${fieldErrors.company ? 'border-red-500/50' : 'border-white/10 focus:border-brand-accent'}`}
+                          placeholder="Stancastle Ltd"
+                        />
+                      </div>
+                      {fieldErrors.company && <p className="text-red-400 text-xs mt-1">{fieldErrors.company}</p>}
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-brand-muted-light uppercase ml-1">Company website *</label>
+                      <div className="relative">
+                        <Globe className="absolute left-3 top-3.5 w-4 h-4 text-brand-muted" />
+                        <input 
+                          type="text" 
+                          value={companyWebsite}
+                          onChange={(e) => { setCompanyWebsite(e.target.value); if (fieldErrors.companyWebsite) setFieldErrors((p) => ({ ...p, companyWebsite: '' })); }}
+                          onBlur={() => setFieldErrors((p) => ({ ...p, companyWebsite: validateUrl(companyWebsite, true) }))}
+                          className={`w-full bg-white/5 border rounded-xl pl-10 pr-4 py-3 text-white focus:outline-none transition-colors ${fieldErrors.companyWebsite ? 'border-red-500/50' : 'border-white/10 focus:border-brand-accent'}`}
+                          placeholder="example.com"
+                        />
+                      </div>
+                      {fieldErrors.companyWebsite && <p className="text-red-400 text-xs mt-1">{fieldErrors.companyWebsite}</p>}
+                    </div>
+                  </>
+                )}
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-brand-muted-light uppercase ml-1">Company</label>
+                  <label className="text-xs font-bold text-brand-muted-light uppercase ml-1">Phone *</label>
                   <div className="relative">
-                    <Building2 className="absolute left-3 top-3.5 w-4 h-4 text-brand-muted" />
+                    <Phone className="absolute left-3 top-3.5 w-4 h-4 text-brand-muted" />
                     <input 
-                      required 
-                      type="text" 
-                      value={company}
-                      onChange={(e) => setCompany(e.target.value)}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white focus:outline-none focus:border-brand-accent transition-colors"
-                      placeholder="Stancastle Ltd"
+                      type="tel" 
+                      value={phone}
+                      onChange={(e) => { setPhone(e.target.value); if (fieldErrors.phone) setFieldErrors((p) => ({ ...p, phone: '' })); }}
+                      onBlur={() => setFieldErrors((p) => ({ ...p, phone: validatePhone(phone) }))}
+                      className={`w-full bg-white/5 border rounded-xl pl-10 pr-4 py-3 text-white focus:outline-none transition-colors ${fieldErrors.phone ? 'border-red-500/50' : 'border-white/10 focus:border-brand-accent'}`}
+                      placeholder="07700 900000"
                     />
                   </div>
+                  {fieldErrors.phone && <p className="text-red-400 text-xs mt-1">{fieldErrors.phone}</p>}
                 </div>
               </>
             )}
 
             <div className="space-y-1">
-              <label className="text-xs font-bold text-brand-muted-light uppercase ml-1">Email</label>
+              <label className="text-xs font-bold text-brand-muted-light uppercase ml-1">Email *</label>
               <div className="relative">
                 <Mail className="absolute left-3 top-3.5 w-4 h-4 text-brand-muted" />
                 <input 
                   required 
                   type="email" 
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white focus:outline-none focus:border-brand-accent transition-colors"
+                  onChange={(e) => { setEmail(e.target.value); if (fieldErrors.email) setFieldErrors((p) => ({ ...p, email: '' })); }}
+                  onBlur={() => setFieldErrors((p) => ({ ...p, email: validateEmail(email) }))}
+                  className={`w-full bg-white/5 border rounded-xl pl-10 pr-4 py-3 text-white focus:outline-none transition-colors ${fieldErrors.email ? 'border-red-500/50' : 'border-white/10 focus:border-brand-accent'}`}
                   placeholder="name@company.com"
                 />
               </div>
+              {fieldErrors.email && <p className="text-red-400 text-xs mt-1">{fieldErrors.email}</p>}
             </div>
 
             <div className="space-y-1">
@@ -236,6 +330,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultVi
                   setView(view === 'signin' ? 'signup' : 'signin');
                   setPasswordError(null);
                   setConfirmPassword('');
+                  setFieldErrors({});
+                  setError(null);
                 }}
                 className="text-brand-accent font-bold hover:text-white transition-colors"
               >

@@ -34,12 +34,14 @@ export interface UserProfile {
   last_name: string;
   company: string;
   email: string;
+  phone?: string | null;
+  company_website?: string | null;
   is_partner: boolean;
 }
 
 export interface Appointment {
   id: string;
-  user_id: string;
+  user_id: string | null;
   service_type: string;
   date: string;
   time: string;

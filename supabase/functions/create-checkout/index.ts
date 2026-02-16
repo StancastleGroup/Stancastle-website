@@ -54,11 +54,21 @@ serve(async (req) => {
       customer_email 
     } = await req.json();
 
-    if (!service_type || !user_id || !date || !time || !success_url || !cancel_url) {
+    if (!service_type || !date || !time || !success_url || !cancel_url) {
       return new Response(
         JSON.stringify({ error: 'Missing required fields' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    const isGuest = !user_id || user_id === '';
+    if (isGuest) {
+      if (!first_name?.trim() || !last_name?.trim() || !email?.trim() || !phone?.trim()) {
+        return new Response(
+          JSON.stringify({ error: 'Guest checkout requires first_name, last_name, email, and phone' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
     const service = PRICES[service_type as keyof typeof PRICES];
@@ -70,15 +80,52 @@ serve(async (req) => {
       );
     }
 
-    // Store booking details in Stripe metadata (will be used to create appointment after payment)
+    // Create pending appointment (does not block slot; get-availability only counts paid/booked)
+    const { data: pendingAppointment, error: insertError } = await supabase
+      .from('appointments')
+      .insert({
+        user_id: isGuest ? null : user_id,
+        service_type,
+        date,
+        time,
+        status: 'pending',
+        first_name: first_name || null,
+        last_name: last_name || null,
+        email: email || customer_email || null,
+        phone: phone || null,
+        company_name: company_name || null,
+        company_website: company_website || null,
+        no_company: no_company === true || no_company === 'true',
+      })
+      .select('id')
+      .single();
+
+    if (insertError) {
+      console.error('Create pending appointment error:', insertError);
+      return new Response(
+        JSON.stringify({ error: 'Could not create booking. Please try again.' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const appointmentId = pendingAppointment?.id;
+    if (!appointmentId) {
+      return new Response(
+        JSON.stringify({ error: 'Could not create booking.' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Store booking details + appointment_id in Stripe metadata (webhook will update pending → paid)
     const sessionConfig: Stripe.Checkout.SessionCreateParams = {
       payment_method_types: ['card'],
       mode: service.mode,
       success_url: `${success_url}?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url,
-      customer_email,
+      customer_email: customer_email || email || undefined,
       metadata: {
-        user_id,
+        appointment_id: String(appointmentId),
+        user_id: isGuest ? '' : (user_id || ''),
         service_type,
         date,
         time,

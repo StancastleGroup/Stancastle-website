@@ -15,7 +15,7 @@ export const Comparison: React.FC = () => {
   return (
     <Section id="theatre" background="subtle">
       <div className="grid lg:grid-cols-2 gap-12 lg:gap-24 items-start">
-        <div className="lg:sticky lg:top-32">
+        <div className="lg:sticky lg:top-32 text-center">
           <h2 className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 md:mb-6 tracking-tight">
             Stop buying <span className="text-brand-accent">theatre.</span>
           </h2>

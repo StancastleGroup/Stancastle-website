@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ArrowRight, ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, CheckCircle2 } from 'lucide-react';
+import { X, ArrowRight, ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, CheckCircle2, UserPlus, User } from 'lucide-react';
 import { supabase, supabaseUrl, supabaseAnonKey } from '../lib/supabase';
 import { AuthModal } from './AuthModal';
 import { Button } from './ui/Button';
 import { useAuth } from '../context/AuthContext';
 import { getBookableDates, getTimeSlotsForDate, formatDateLabel } from '../lib/availability';
+import { validateEmail as validateEmailFormat, validatePhone as validatePhoneFormat, validateUrl as validateUrlFormat } from '../lib/validation';
 
 /** Format "10:00" -> "10:00am", "17:00" -> "5:00pm" */
 function formatTimeLabel(time: string): string {
@@ -50,6 +51,7 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
   const [selectedTime, setSelectedTime] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
+  const [checkoutChoice, setCheckoutChoice] = useState<'account' | 'guest' | null>(null);
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -184,9 +186,16 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
       if (profile.first_name && profile.first_name !== f.firstName) updates.firstName = profile.first_name;
       if (profile.last_name && profile.last_name !== f.lastName) updates.lastName = profile.last_name;
       if (profile.company && profile.company !== f.companyName) updates.companyName = profile.company;
+      if (profile.phone != null && profile.phone !== f.phone) updates.phone = profile.phone;
+      if (profile.company_website != null && profile.company_website !== f.companyWebsite) updates.companyWebsite = profile.company_website;
       return Object.keys(updates).length > 0 ? { ...f, ...updates } : f;
     });
-  }, [profile?.email, profile?.first_name, profile?.last_name, profile?.company]);
+  }, [profile?.email, profile?.first_name, profile?.last_name, profile?.company, profile?.phone, profile?.company_website]);
+
+  // Reset checkout choice when user signs in (e.g. after "Create account")
+  useEffect(() => {
+    if (session) setCheckoutChoice(null);
+  }, [session]);
 
   const bookableDates = useMemo(() => {
     const dates = Object.keys(availabilityByDate).filter((d) => (availabilityByDate[d]?.length ?? 0) > 0).sort();
@@ -255,139 +264,137 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
     return cells;
   }, [calendarViewMonth, bookableDateSet]);
 
-  // Validation functions
-  const validateEmail = (email: string): string => {
-    if (!email.trim()) return 'Email is required';
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email.trim())) return 'Please enter a valid email address';
-    return '';
-  };
+  const validateEmail = (email: string) => validateEmailFormat(email);
+  const validatePhone = (phone: string) => validatePhoneFormat(phone);
+  const validateUrl = (url: string, required = true) => validateUrlFormat(url, required);
 
-  const validatePhone = (phone: string): string => {
-    if (!phone.trim()) return 'Phone number is required';
-    // UK phone: +44, 0, or international format. Remove spaces/dashes for validation
-    const cleaned = phone.replace(/[\s\-\(\)]/g, '');
-    const phoneRegex = /^(\+44|0|44)?[1-9]\d{8,9}$/;
-    if (!phoneRegex.test(cleaned)) return 'Please enter a valid UK phone number';
-    return '';
-  };
-
-  const validateUrl = (url: string): string => {
-    const trimmed = url.trim();
-    if (!trimmed) return 'Company website is required';
+  const checkEmailRegistered = useCallback(async (emailToCheck: string): Promise<boolean> => {
+    const trimmed = emailToCheck?.trim();
+    if (!trimmed || validateEmailFormat(trimmed) !== '') return false;
     try {
-      // Accept with or without protocol (e.g. example.com or https://example.com)
-      const toParse = trimmed.includes('://') ? trimmed : `https://${trimmed}`;
-      const urlObj = new URL(toParse);
-      if (urlObj.protocol && !['http:', 'https:'].includes(urlObj.protocol)) {
-        return 'Website must use http:// or https://, or enter a domain (e.g. example.com)';
-      }
-      // Reject if hostname is empty or invalid
-      if (!urlObj.hostname || urlObj.hostname.length < 2) {
-        return 'Please enter a valid website or domain (e.g. example.com)';
-      }
-      return '';
+      const res = await fetch(`${supabaseUrl}/functions/v1/check-email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', apikey: supabaseAnonKey },
+        body: JSON.stringify({ email: trimmed }),
+      });
+      const data = await res.json().catch(() => ({}));
+      return data.registered === true;
     } catch {
-      return 'Please enter a valid website or domain (e.g. example.com)';
+      return false;
     }
-  };
+  }, []);
 
   const validateForm = (): boolean => {
     const errors: Record<string, string> = {};
-    
     if (!formData.firstName.trim()) errors.firstName = 'First name is required';
     if (!formData.lastName.trim()) errors.lastName = 'Last name is required';
-    
     const emailError = validateEmail(formData.email);
     if (emailError) errors.email = emailError;
-    
     const phoneError = validatePhone(formData.phone);
     if (phoneError) errors.phone = phoneError;
-    
     if (!formData.noCompany) {
       if (!formData.companyName.trim()) errors.companyName = 'Company name is required';
-      const urlError = validateUrl(formData.companyWebsite);
+      const urlError = validateUrl(formData.companyWebsite, true);
       if (urlError) errors.companyWebsite = urlError;
     }
-    
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
 
-  const canProceedToPayment =
+  const canProceedAsGuest =
     formData.firstName.trim() &&
     formData.lastName.trim() &&
     formData.email?.trim() &&
     formData.phone.trim() &&
-    (formData.noCompany || formData.companyName.trim());
+    (formData.noCompany || (formData.companyName.trim() && formData.companyWebsite?.trim()));
+  const canProceedToPayment = session
+    ? !!(selectedTime && profile?.email)
+    : canProceedAsGuest && !!selectedTime && !formErrors.email;
 
   const handlePayment = async () => {
-    console.log('[BookingFlow] handlePayment called', { selectedService, selectedTime, hasSession: !!session });
+    console.log('[BookingFlow] handlePayment called', { selectedService, selectedTime, hasSession: !!session, isGuest: checkoutChoice === 'guest' });
     
     if (!selectedService || !selectedTime) {
       console.warn('[BookingFlow] Missing service or time');
       return;
     }
-    
-    // Validate form data types
-    if (!validateForm()) {
-      console.warn('[BookingFlow] Form validation failed');
+
+    const isGuest = !session && checkoutChoice === 'guest';
+    if (!session && !isGuest) {
+      alert('Please choose "Create account" or "Continue as guest" and complete the form.');
       return;
     }
 
-    if (!session) {
-      console.warn('[BookingFlow] No session');
-      alert('Please sign in first to schedule a call. Click "Sign In" in the navigation menu to continue.');
-      return;
+    if (isGuest) {
+      if (!validateForm()) {
+        console.warn('[BookingFlow] Guest form validation failed');
+        return;
+      }
+      const alreadyRegistered = await checkEmailRegistered(formData.email);
+      if (alreadyRegistered) {
+        setFormErrors((prev) => ({ ...prev, email: 'This email is already registered. Please sign in to continue.' }));
+        return;
+      }
+    }
+
+    if (session) {
+      if (!profile?.email) {
+        alert('Your account is missing an email. Please sign out and sign in again or contact support.');
+        return;
+      }
+      // Refresh session so the access_token is valid (avoids 401 from expired JWT)
+      const { data: { session: freshSession }, error: refreshError } = await supabase.auth.refreshSession();
+      if (refreshError || !freshSession?.access_token) {
+        setShowAuthPrompt(true);
+        alert('Your session expired. Please sign in again.');
+        return;
+      }
     }
 
     console.log('[BookingFlow] Starting payment process');
     setIsProcessing(true);
 
     try {
-      // Refresh session so the access_token is valid (avoids 401 from expired JWT)
-      const { data: { session: freshSession }, error: refreshError } = await supabase.auth.refreshSession();
-      const tokenSession = freshSession ?? session;
-      if (refreshError || !tokenSession?.access_token) {
-        setShowAuthPrompt(true);
-        alert('Your session expired. Please sign in again.');
-        setIsProcessing(false);
-        return;
+      const dateStr = selectedDate?.toISOString().split('T')[0];
+      const customerEmail = session
+        ? (profile?.email || formData.email?.trim() || '')
+        : formData.email?.trim() || '';
+      const firstName = session ? (profile?.first_name || formData.firstName.trim() || '') : formData.firstName.trim() || '';
+      const lastName = session ? (profile?.last_name || formData.lastName.trim() || '') : formData.lastName.trim() || '';
+      const phoneVal = session ? (profile?.phone || formData.phone.trim() || null) : formData.phone.trim() || null;
+      const companyNameVal = formData.noCompany ? null : (formData.companyName.trim() || (session ? profile?.company || null : null));
+      let companyWebsiteVal: string | null = null;
+      if (!formData.noCompany) {
+        const raw = formData.companyWebsite?.trim() || (session ? profile?.company_website || null : null);
+        if (raw) companyWebsiteVal = raw.startsWith('http') ? raw : `https://${raw}`;
       }
 
-      const dateStr = selectedDate?.toISOString().split('T')[0];
-      const customerEmail = formData.email?.trim() || profile?.email || tokenSession.user.email!;
-      
-      // Don't create appointment yet - only create after payment succeeds
-      // Pass booking details to create-checkout, which will store them in Stripe metadata
+      const currentSession = session ? (await supabase.auth.getSession()).data.session : null;
+      const userId = currentSession?.user?.id ?? null;
+
       const res = await fetch(`${supabaseUrl}/functions/v1/create-checkout`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-          'apikey': supabaseAnonKey,
+            'apikey': supabaseAnonKey,
+            ...(currentSession?.access_token ? { Authorization: `Bearer ${currentSession.access_token}` } : {}),
           },
           body: JSON.stringify({
             service_type: selectedService,
-          user_id: tokenSession.user.id,
-          // Booking details (will be stored in Stripe metadata and used to create appointment after payment)
-          date: dateStr,
-          time: selectedTime,
-          first_name: formData.firstName.trim() || profile?.first_name || '',
-          last_name: formData.lastName.trim() || profile?.last_name || '',
-          email: customerEmail || '',
-          phone: formData.phone.trim() || null,
-          company_name: formData.noCompany ? null : (formData.companyName.trim() || profile?.company || null),
-          company_website: formData.noCompany ? null : (() => {
-            const raw = formData.companyWebsite.trim() || null;
-            if (!raw) return null;
-            if (raw.startsWith('http://') || raw.startsWith('https://')) return raw;
-            return `https://${raw}`;
-          })(),
-          no_company: formData.noCompany || false,
+            user_id: userId,
+            date: dateStr,
+            time: selectedTime,
+            first_name: firstName,
+            last_name: lastName,
+            email: customerEmail,
+            phone: phoneVal,
+            company_name: companyNameVal,
+            company_website: companyWebsiteVal,
+            no_company: formData.noCompany || false,
             success_url: `${window.location.origin}?booking=success`,
             cancel_url: `${window.location.origin}?booking=cancelled`,
-          customer_email: customerEmail || undefined,
-        }),
+            customer_email: customerEmail || undefined,
+          }),
       });
 
       let checkoutData: any = {};
@@ -486,7 +493,10 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
     <>
       <AuthModal 
         isOpen={showAuthPrompt} 
-        onClose={() => setShowAuthPrompt(false)} 
+        onClose={() => {
+          setShowAuthPrompt(false);
+          if (!session) setCheckoutChoice(null);
+        }} 
         defaultView="signup" 
       />
       
@@ -671,8 +681,61 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.15 }}
                 >
-                  <p className="text-brand-muted-light text-sm">A few details so we can confirm your booking and send the meeting link.</p>
-                  <div className="grid sm:grid-cols-2 gap-4">
+                  {session ? (
+                    <>
+                      <p className="text-brand-muted-light text-sm">You’re signed in. Confirm your booking and pay—we’ll use your account details.</p>
+                      <div className="pt-4 border-t border-white/10">
+                        <p className="text-brand-muted-light text-xs mb-3">Your booking: {formatDateLabel(selectedDate)} at {selectedTime} · {SERVICES[selectedService].title}</p>
+                        <Button 
+                          className="w-full !py-6 text-xl" 
+                          onClick={async (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            if (!isProcessing && canProceedToPayment && selectedTime) {
+                              try { await handlePayment(); } catch (err) {
+                                console.error('[BookingFlow] Payment handler error:', err);
+                                setIsProcessing(false);
+                              }
+                            }
+                          }}
+                          disabled={isProcessing || !canProceedToPayment || !selectedTime}
+                          type="button"
+                        >
+                          {isProcessing ? 'Processing...' : `Pay ${SERVICES[selectedService].price} & confirm`}
+                        </Button>
+                      </div>
+                    </>
+                  ) : checkoutChoice === null || checkoutChoice === 'account' ? (
+                    <>
+                      <p className="text-brand-muted-light text-sm">Choose how to continue with your booking.</p>
+                      <div className="grid sm:grid-cols-2 gap-4">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="w-full !py-6 flex flex-col items-center gap-2"
+                          onClick={() => { setCheckoutChoice('account'); setShowAuthPrompt(true); }}
+                        >
+                          <UserPlus className="w-6 h-6" />
+                          Create account
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="w-full !py-6 flex flex-col items-center gap-2"
+                          onClick={() => { setCheckoutChoice('guest'); setShowAuthPrompt(false); }}
+                        >
+                          <User className="w-6 h-6" />
+                          Continue as guest
+                        </Button>
+                      </div>
+                      {checkoutChoice === 'account' && (
+                        <p className="text-center text-brand-muted-light text-sm">Complete sign up in the modal, or <button type="button" onClick={() => { setCheckoutChoice('guest'); setShowAuthPrompt(false); }} className="text-brand-accent hover:text-white">continue as guest</button>.</p>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-brand-muted-light text-sm">Enter your details so we can confirm your booking and send the meeting link.</p>
+                      <div className="grid sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-bold text-brand-muted-light uppercase tracking-wider mb-1.5">First name *</label>
                       <input
@@ -716,14 +779,18 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
                       onChange={(e) => {
                         const value = e.target.value;
                         setFormData((prev) => ({ ...prev, email: value }));
-                        if (formErrors.email) {
-                          const error = validateEmail(value);
-                          setFormErrors((prev) => ({ ...prev, email: error }));
-                        }
+                        const error = validateEmail(value);
+                        setFormErrors((prev) => ({ ...prev, email: error }));
                       }}
-                      onBlur={(e) => {
-                        const error = validateEmail(e.target.value);
-                        if (error) setFormErrors((prev) => ({ ...prev, email: error }));
+                      onBlur={async (e) => {
+                        const val = e.target.value;
+                        const error = validateEmail(val);
+                        if (error) {
+                          setFormErrors((prev) => ({ ...prev, email: error }));
+                          return;
+                        }
+                        const registered = await checkEmailRegistered(val);
+                        if (registered) setFormErrors((prev) => ({ ...prev, email: 'This email is already registered. Please sign in to continue.' }));
                       }}
                       placeholder="you@company.com"
                       className={`w-full bg-white/[0.03] border rounded-xl px-4 py-3 text-white placeholder:text-brand-muted focus:outline-none transition-colors ${
@@ -826,31 +893,22 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
                       onClick={async (e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        console.log('[BookingFlow] Pay button clicked, isProcessing:', isProcessing, 'canProceed:', canProceedToPayment, 'selectedTime:', selectedTime);
-                        
                         if (!isProcessing && canProceedToPayment && selectedTime) {
-                          try {
-                            await handlePayment();
-                          } catch (err) {
+                          try { await handlePayment(); } catch (err) {
                             console.error('[BookingFlow] Payment handler error:', err);
                             setIsProcessing(false);
-                            redirectUrlRef.current = null; // Clear on error
+                            redirectUrlRef.current = null;
                           }
-                        } else {
-                          console.warn('[BookingFlow] Button click ignored:', { isProcessing, canProceedToPayment, selectedTime });
                         }
                       }}
                       disabled={isProcessing || !canProceedToPayment || !selectedTime}
                       type="button"
                     >
-                      {isProcessing 
-                        ? 'Processing...' 
-                        : !session 
-                          ? `Sign in to pay ${SERVICES[selectedService].price}`
-                          : `Pay ${SERVICES[selectedService].price} & confirm`
-                      }
-                      </Button>
+                      {isProcessing ? 'Processing...' : `Pay ${SERVICES[selectedService].price} & confirm`}
+                    </Button>
                   </div>
+                    </>
+                  )}
                 </motion.div>
               )}
             </AnimatePresence>

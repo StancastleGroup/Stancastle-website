@@ -225,6 +225,7 @@ serve(async (req) => {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session;
         const { 
+          appointment_id: metadataAppointmentId,
           user_id, 
           service_type, 
           date, 
@@ -238,39 +239,75 @@ serve(async (req) => {
           no_company 
         } = session.metadata || {};
 
-        if (!user_id || !service_type || !date || !time) {
-          console.error('[stripe-webhook] Missing required metadata for appointment creation:', { user_id, service_type, date, time });
+        if (!service_type || !date || !time) {
+          console.error('[stripe-webhook] Missing required metadata:', { service_type, date, time });
           break;
         }
 
-        // Create appointment record AFTER payment succeeds
-        const { data: appointment, error: appointmentError } = await supabase
-          .from('appointments')
-          .insert({
-            user_id,
-            service_type,
-            date,
-            time,
-            status: 'paid', // Directly set to 'paid' since payment succeeded
-            stripe_session_id: session.id,
-            amount_paid: session.amount_total,
-            first_name: first_name || null,
-            last_name: last_name || null,
-            email: email || session.customer_email || null,
-            phone: phone || null,
-            company_name: company_name || null,
-            company_website: company_website || null,
-            no_company: no_company === 'true',
-          })
-          .select()
-          .single();
+        let appointment: { id: string; user_id: string | null; date: string; time: string; email: string | null; service_type: string } | null = null;
 
-        if (appointmentError) {
-          console.error('[stripe-webhook] Error creating appointment:', appointmentError);
-          break;
+        if (metadataAppointmentId) {
+          // Update existing pending appointment to paid
+          const { data: updated, error: updateError } = await supabase
+            .from('appointments')
+            .update({
+              status: 'paid',
+              stripe_session_id: session.id,
+              amount_paid: session.amount_total,
+              first_name: first_name || null,
+              last_name: last_name || null,
+              email: email || session.customer_email || null,
+              phone: phone || null,
+              company_name: company_name || null,
+              company_website: company_website || null,
+              no_company: no_company === 'true',
+            })
+            .eq('id', metadataAppointmentId)
+            .select()
+            .single();
+
+          if (updateError) {
+            console.error('[stripe-webhook] Error updating pending appointment:', updateError);
+            break;
+          }
+          appointment = updated;
+          console.log('[stripe-webhook] Appointment updated to paid:', appointment.id);
+        } else {
+          // Legacy: create appointment if no appointment_id in metadata (user_id required for this path)
+          if (!user_id) {
+            console.error('[stripe-webhook] Missing appointment_id and user_id');
+            break;
+          }
+          const { data: inserted, error: appointmentError } = await supabase
+            .from('appointments')
+            .insert({
+              user_id,
+              service_type,
+              date,
+              time,
+              status: 'paid',
+              stripe_session_id: session.id,
+              amount_paid: session.amount_total,
+              first_name: first_name || null,
+              last_name: last_name || null,
+              email: email || session.customer_email || null,
+              phone: phone || null,
+              company_name: company_name || null,
+              company_website: company_website || null,
+              no_company: no_company === 'true',
+            })
+            .select()
+            .single();
+
+          if (appointmentError) {
+            console.error('[stripe-webhook] Error creating appointment:', appointmentError);
+            break;
+          }
+          appointment = inserted;
+          console.log('[stripe-webhook] Appointment created:', appointment.id);
         }
 
-        console.log('[stripe-webhook] Appointment created:', appointment.id);
+        if (!appointment) break;
 
         const durationMinutes = service_type === 'partner' ? 60 : 90;
         let zoomJoinUrl: string | null = null;
