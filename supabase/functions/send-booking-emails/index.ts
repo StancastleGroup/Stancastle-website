@@ -8,7 +8,8 @@ const corsHeaders = {
 
 // Use Resend's test sender when no domain verified; set BOOKING_FROM_EMAIL (e.g. contact@stancastle.com) after verifying your domain.
 const FROM_EMAIL = Deno.env.get('BOOKING_FROM_EMAIL') || 'Stancastle <onboarding@resend.dev>';
-const PREP_FORM_URL = Deno.env.get('PREP_FORM_URL') || 'https://stancastle.com/prep';
+// Prep form link: always use production URL (emails go to booked clients).
+const PREP_FORM_URL = 'https://www.stancastle.co.uk/prep';
 
 /** Format date and time for UK display in emails. Handles ISO date strings and missing time. */
 function formatDateTime(dateStr: string | null | undefined, timeStr: string | null | undefined): string {
