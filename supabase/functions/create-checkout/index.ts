@@ -16,6 +16,27 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const PENDING_NOTIFY_EMAIL = 'contact@stancastle.com';
+const FROM_EMAIL = Deno.env.get('BOOKING_FROM_EMAIL') || 'Stancastle <onboarding@resend.dev>';
+
+function escapeHtml(s: string): string {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function formatDate(dateStr: string): string {
+  const dateOnly = dateStr.includes('T') ? dateStr.slice(0, 10) : dateStr;
+  const [y, m, d] = dateOnly.split('-').map(Number);
+  if (isNaN(y) || isNaN(m) || isNaN(d)) return dateStr;
+  const date = new Date(y, m - 1, d);
+  if (isNaN(date.getTime())) return dateStr;
+  return date.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+}
+
 const PRICES = {
   diagnostic: {
     amount: 15999, // £159.99 in pence
@@ -114,6 +135,38 @@ serve(async (req) => {
         JSON.stringify({ error: 'Could not create booking.' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    // Notify contact@stancastle.com about pending payment (so you can follow up by phone)
+    const resendKey = Deno.env.get('RESEND_API_KEY');
+    if (resendKey) {
+      const fullName = [first_name, last_name].filter(Boolean).join(' ').trim() || '—';
+      const company = company_name?.trim() || (no_company ? 'No company' : '—');
+      const serviceName = service_type === 'partner' ? 'Partner Programme' : 'Diagnostic Session';
+      const dateFormatted = formatDate(date);
+      const html = `
+        <p><strong>Pending payment</strong> – a customer has started checkout but not yet paid. You can call to help complete payment.</p>
+        <p><strong>Name:</strong> ${escapeHtml(fullName)}<br><strong>Company:</strong> ${escapeHtml(company)}<br><strong>Email:</strong> ${escapeHtml(email || customer_email || '—')}<br><strong>Phone:</strong> ${escapeHtml(phone || '—')}</p>
+        <p><strong>Service:</strong> ${escapeHtml(serviceName)}<br><strong>Date & time:</strong> ${escapeHtml(dateFormatted)} at ${escapeHtml(time || '—')} (UK time)</p>
+      `;
+      try {
+        const res = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${resendKey}` },
+          body: JSON.stringify({
+            from: FROM_EMAIL,
+            to: [PENDING_NOTIFY_EMAIL],
+            subject: `Pending payment – ${fullName || 'Customer'} – ${serviceName} on ${dateFormatted}`,
+            html,
+          }),
+        });
+        if (!res.ok) {
+          const err = await res.text();
+          console.error('create-checkout: pending notification email failed', res.status, err);
+        }
+      } catch (e) {
+        console.error('create-checkout: pending notification email error', e);
+      }
     }
 
     // Store booking details + appointment_id in Stripe metadata (webhook will update pending → paid)
