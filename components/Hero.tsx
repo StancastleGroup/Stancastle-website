@@ -2,27 +2,6 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { motion, Variants } from 'framer-motion';
 import { Trophy, ChevronRight, Sparkles } from 'lucide-react';
 
-const companies = [
-  { name: "Travelodge", domain: "travelodge.co.uk" },
-  { name: "Amazon", domain: "amazon.co.uk" },
-  { name: "1st Enable", domain: "1stenable.co.uk" },
-  { name: "Zeno Ltd", domain: "zenoltd.co.uk" },
-  { name: "Fourth", domain: "fourth.com" },
-  { name: "Marks & Spencer", domain: "marksandspencer.com" },
-  { name: "Drivora", domain: "drivora.app" },
-  { name: "Oneshot Trials", domain: "oneshot.co.uk" }
-];
-
-const Logo: React.FC<{ company: typeof companies[0] }> = ({ company }) => (
-  <div className="flex items-center justify-center h-8 md:h-12 w-auto min-w-[120px] px-6 grayscale brightness-[3] opacity-20 hover:opacity-100 transition-all duration-700 transform hover:scale-105">
-    <img 
-      src={`https://www.google.com/s2/favicons?domain=${company.domain}&sz=128`} 
-      alt={company.name} 
-      className="h-full w-auto object-contain max-w-[140px]"
-    />
-  </div>
-);
-
 const CrossingX: React.FC<{ delay: number; isMobile?: boolean }> = ({ delay, isMobile }) => {
   if (isMobile) {
     return (
@@ -243,40 +222,6 @@ export const Hero: React.FC<HeroProps> = ({ onOpenBooking }) => {
             </button>
           </motion.div>
         </motion.div>
-      </div>
-
-      {/* Trust Ribbon */}
-      <div className="w-full relative border-t border-white/5 bg-black/40 backdrop-blur-3xl py-12 overflow-hidden mt-auto">
-        <div className="container mx-auto px-6">
-          <div className="flex flex-col items-center gap-8">
-            <div className="relative flex items-center h-10 w-full max-w-7xl mx-auto overflow-hidden">
-               <div className="absolute inset-y-0 left-0 w-32 md:w-64 bg-gradient-to-r from-brand-dark via-brand-dark/95 to-transparent z-10" />
-               <div className="absolute inset-y-0 right-0 w-32 md:w-64 bg-gradient-to-l from-brand-dark via-brand-dark/95 to-transparent z-10" />
-               
-               {isMobile ? (
-                 <div className="flex items-center gap-12 whitespace-nowrap marquee-mobile">
-                   {[...companies, ...companies].map((c, i) => (
-                     <Logo key={`${c.name}-${i}`} company={c} />
-                   ))}
-                 </div>
-               ) : (
-                 <motion.div 
-                   className="flex items-center gap-24 md:gap-44 whitespace-nowrap"
-                   animate={{ x: ['0%', '-50%'] }}
-                   transition={{ duration: 40, repeat: Infinity, ease: 'linear' }}
-                 >
-                   {[...companies, ...companies].map((c, i) => (
-                     <Logo key={`${c.name}-${i}`} company={c} />
-                   ))}
-                 </motion.div>
-               )}
-            </div>
-            
-            <p className="text-[10px] text-brand-muted uppercase tracking-[0.45em] text-center font-black">
-              Founder professional exposure includes leading UK organisations. No commercial partnership implied.
-            </p>
-          </div>
-        </div>
       </div>
     </section>
   );

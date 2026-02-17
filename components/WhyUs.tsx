@@ -58,8 +58,8 @@ export const WhyUs: React.FC = () => {
               {/* Hover Gradient Glow */}
               <div className="absolute inset-0 bg-gradient-to-br from-brand-accent/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
               
-              {/* Mobile: icon left, title+text right. Desktop: icon centered above title+text */}
-              <div className="relative z-10 flex flex-row gap-4 md:flex-col">
+              {/* Mobile: icon centered on left; desktop: icon centered above title+text */}
+              <div className="relative z-10 flex flex-row items-center gap-4 md:flex-col md:items-stretch">
                 <div className="shrink-0 w-12 h-12 md:w-14 md:h-14 md:mx-auto mb-0 md:mb-8 rounded-xl bg-gradient-to-br from-gray-800 to-black border border-white/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-500 shadow-lg group-hover:shadow-brand-accent/20">
                   <item.icon className="w-6 h-6 md:w-7 md:h-7 text-brand-accent" />
                 </div>

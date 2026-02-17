@@ -154,10 +154,6 @@ const MarqueeRow: React.FC<{
 };
 
 export const Testimonials: React.FC = () => {
-  const row1 = testimonials.slice(0, 3);
-  const row2 = testimonials.slice(3, 6);
-  const row3 = testimonials.slice(6, 9);
-
   return (
     <section id="results" className="bg-[#050508] py-12 md:py-20 relative overflow-hidden">
       {/* Background - no pulse on mobile for performance */}
@@ -181,14 +177,12 @@ export const Testimonials: React.FC = () => {
         </div>
       </div>
 
-      {/* Marquee - full width, edge fades */}
+      {/* Single marquee row */}
       <div className="relative z-10 w-full overflow-hidden">
         <div className="absolute inset-y-0 left-0 w-16 sm:w-24 md:w-40 bg-gradient-to-r from-[#050508] via-[#050508]/80 to-transparent z-20 pointer-events-none" />
         <div className="absolute inset-y-0 right-0 w-16 sm:w-24 md:w-40 bg-gradient-to-l from-[#050508] via-[#050508]/80 to-transparent z-20 pointer-events-none" />
-        <div className="space-y-4 md:space-y-6 py-2">
-          <MarqueeRow items={row1} direction="left" duration={45} />
-          <MarqueeRow items={row2} direction="right" duration={55} />
-          <MarqueeRow items={row3} direction="left" duration={50} />
+        <div className="py-2">
+          <MarqueeRow items={testimonials} direction="left" duration={50} />
         </div>
       </div>
 

@@ -2,7 +2,7 @@ import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { Navigation } from './components/Navigation';
 import { AuthProvider } from './context/AuthContext';
 import { AnimatePresence, motion } from 'framer-motion';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, ChevronUp } from 'lucide-react';
 
 // Lazy load all below-the-fold components for better initial load performance
 const Hero = lazy(() => import('./components/Hero').then((m) => ({ default: m.Hero })));
@@ -45,6 +45,27 @@ function App() {
       mq.removeEventListener('change', handler);
       clearTimeout(timer);
     };
+  }, []);
+
+  // Back to top button - show after scrolling down
+  const [showBackToTop, setShowBackToTop] = useState(false);
+  useEffect(() => {
+    const threshold = 200;
+    const getScrollTop = () =>
+      typeof window === 'undefined' ? 0 : window.pageYOffset ?? document.documentElement.scrollTop ?? 0;
+    let ticking = false;
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        setShowBackToTop(getScrollTop() > threshold);
+        ticking = false;
+      });
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    // Initial check in case page is loaded already scrolled
+    onScroll();
+    return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
   const handleOpenBooking = (type?: 'diagnostic' | 'partner') => {
@@ -151,7 +172,25 @@ function App() {
         <Suspense fallback={null}>
           <Footer />
         </Suspense>
+
       </main>
+
+      {/* Sticky back-to-top button - bottom right */}
+      <AnimatePresence>
+        {showBackToTop && (
+          <motion.button
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 8 }}
+            transition={{ duration: 0.2 }}
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            className="fixed right-4 md:right-6 bottom-4 md:bottom-6 z-[90] w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-brand-accent text-white flex items-center justify-center shadow-[0_8px_30px_rgba(217,70,239,0.4)] hover:brightness-110 hover:scale-105 hover:shadow-[0_12px_40px_rgba(217,70,239,0.6)] active:scale-95 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-white/50 focus:ring-offset-2 focus:ring-offset-brand-dark"
+            aria-label="Go to top"
+          >
+            <ChevronUp className="w-7 h-7 md:w-8 md:h-8" strokeWidth={2.5} />
+          </motion.button>
+        )}
+      </AnimatePresence>
     </AuthProvider>
   );
 }
