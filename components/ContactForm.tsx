@@ -2,15 +2,42 @@ import React, { useState } from 'react';
 import { Section } from './ui/Section';
 import { Button } from './ui/Button';
 import { Phone, Clock, CheckCircle2 } from 'lucide-react';
+import { supabaseUrl } from '../lib/supabase';
 
 export const ContactForm: React.FC = () => {
-  const [status, setStatus] = useState<'idle' | 'submitting' | 'success'>('idle');
+  const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
+  const [errorMessage, setErrorMessage] = useState('');
+  const [form, setForm] = useState({ name: '', email: '', phone: '', message: '' });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMessage('');
     setStatus('submitting');
-    // Simulate API call
-    setTimeout(() => setStatus('success'), 1500);
+
+    try {
+      const res = await fetch(`${supabaseUrl}/functions/v1/send-inquiry`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: form.name.trim(),
+          email: form.email.trim(),
+          phone: form.phone.trim(),
+          message: form.message.trim(),
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setStatus('error');
+        setErrorMessage(data?.error ?? 'Something went wrong. Please try again.');
+        return;
+      }
+      setStatus('success');
+      setForm({ name: '', email: '', phone: '', message: '' });
+    } catch (err) {
+      setStatus('error');
+      setErrorMessage(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
+    }
   };
 
   return (
@@ -92,6 +119,8 @@ export const ContactForm: React.FC = () => {
                       type="text" 
                       placeholder="John Doe"
                       required
+                      value={form.name}
+                      onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                       className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-brand-muted focus:outline-none focus:border-brand-accent transition-colors"
                     />
                   </div>
@@ -102,6 +131,8 @@ export const ContactForm: React.FC = () => {
                       type="email" 
                       placeholder="john@company.com"
                       required
+                      value={form.email}
+                      onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
                       className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-brand-muted focus:outline-none focus:border-brand-accent transition-colors"
                     />
                   </div>
@@ -112,6 +143,8 @@ export const ContactForm: React.FC = () => {
                       type="tel" 
                       placeholder="07700 900000"
                       required
+                      value={form.phone}
+                      onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
                       className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-brand-muted focus:outline-none focus:border-brand-accent transition-colors"
                     />
                   </div>
@@ -122,9 +155,15 @@ export const ContactForm: React.FC = () => {
                       rows={4}
                       placeholder="Current revenue, biggest bottleneck, etc..."
                       required
+                      value={form.message}
+                      onChange={(e) => setForm((f) => ({ ...f, message: e.target.value }))}
                       className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-brand-muted focus:outline-none focus:border-brand-accent transition-colors resize-none"
-                    ></textarea>
+                    />
                   </div>
+
+                  {status === 'error' && (
+                    <p className="text-red-400 text-sm">{errorMessage}</p>
+                  )}
 
                   <Button 
                     type="submit" 
